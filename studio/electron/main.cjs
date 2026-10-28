@@ -21,7 +21,12 @@ let activeFile = "",
   mode = "Idle",
   running = null,
   closeApproved = false;
-const presence = new DiscordPresence();
+const presence = new DiscordPresence(
+  process.argv.includes("--chud-test-mode") &&
+  process.env.CHUD_DISCORD_TEST_PIPE
+    ? { paths: [process.env.CHUD_DISCORD_TEST_PIPE] }
+    : {},
+);
 const assistant = new Assistant();
 const send = (channel, data) => {
   if (window && !window.isDestroyed())

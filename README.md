@@ -9,7 +9,7 @@ The compiler lexes and parses real `.chud` / `.CHUD` source, checks types and sc
 - Native compilation of `int`, `bool`, strings, functions, immutable/mutable locals, literal constants, conditionals, ranges, loops, short circuit logic, and console output.
 - `chud new`, `build`, `run`, `check`, `test`, and `clean`, including multi-file projects and debug/release optimization choices.
 - Studio's local Monaco editor, file explorer, source tabs, split editor, saving/autosave, compiler diagnostics, Build/Run/Stop, command execution through PowerShell, and persisted settings.
-- **Settings → Discord Rich Presence**: optional activity sharing, application ID, project/filename privacy controls, elapsed time, reconnection and clearing on disable/exit. Defaults off.
+- **Settings → Discord Rich Presence**: a simple enable toggle with a built-in CHUD Studio identity, project/filename privacy controls, elapsed time, reconnection and clearing on disable/exit. Defaults off.
 - Four ChudGPT model adapters, explicit context attachments, cancellation, per-model conversations, Markdown/code copying, and a diff review before applying a proposed file replacement.
 - A small compiler-backed language server with document diagnostics, incremental edits, keyword/builtin completion and function symbols.
 
@@ -51,9 +51,9 @@ For the supplied sample, run `chud run` inside `examples/HelloWorld`. `examples/
 
 ## Discord Rich Presence
 
-Open Studio settings with **Ctrl+,**, find **Discord Rich Presence**, enter your application ID from the [Discord Developer Portal](https://discord.com/developers/applications), enable **Show CHUD Studio on Discord**, and save. Name the Discord application **CHUD Studio** so Discord displays that name. Keep the Discord desktop client open and allow activity sharing in Discord.
+Open Studio settings with **Ctrl+,**, enable **Show CHUD Studio on Discord**, and save. Keep Discord desktop running and allow activity sharing in Discord. Studio includes its own registered application identity, so no application ID, bot token, or account setup is required.
 
-Project and filename sharing default off; each can be enabled separately. Only basenames are shared, alongside Editing/Building/Running/Idle and optional session time. Source code, absolute paths and chat contents are excluded. No bot token is needed. A valid application ID is required for live use; the automated IPC tests use a test server and do not post to your Discord account.
+Project and filename sharing default off; each can be enabled separately. Only basenames are shared, alongside Editing/Building/Running/Idle and optional session time. Source code, absolute paths and chat contents are excluded. **Advanced Discord options** lets developers optionally use a custom application ID. Existing custom IDs are preserved when upgrading. The automated IPC and UI tests use a local test server and do not post to your Discord account.
 
 ## Validation
 

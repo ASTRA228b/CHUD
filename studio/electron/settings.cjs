@@ -13,6 +13,7 @@ const defaults = Object.freeze({
   requestTimeout: 90000,
   discord: Object.freeze({
     enabled: false,
+    useCustomApplication: false,
     applicationId: "",
     showProject: false,
     showFile: false,
@@ -31,6 +32,12 @@ function validateSettings(input) {
       throw new Error("Invalid Discord settings");
     for (const key of Object.keys(s.discord))
       if (Object.hasOwn(d, key)) s.discord[key] = d[key];
+    // Existing installations with a custom identity keep using it. Empty IDs
+    // now select Studio's shared identity rather than blocking the toggle.
+    if (!Object.hasOwn(d, "useCustomApplication"))
+      s.discord.useCustomApplication =
+        typeof d.applicationId === "string" &&
+        /^\d{17,20}$/.test(d.applicationId.trim());
   }
   if (!Number.isInteger(s.fontSize) || s.fontSize < 10 || s.fontSize > 32)
     throw new Error("Font size must be 10–32");
@@ -65,18 +72,25 @@ function validateSettings(input) {
       throw new Error("API URL must use HTTPS (HTTP is allowed for localhost)");
     s[key] = url.href.replace(/\/$/, "");
   }
-  for (const key of ["enabled", "showProject", "showFile", "showElapsed"])
+  for (const key of [
+    "enabled",
+    "useCustomApplication",
+    "showProject",
+    "showFile",
+    "showElapsed",
+  ])
     if (typeof s.discord[key] !== "boolean")
       throw new Error(`Invalid Discord ${key}`);
   if (typeof s.discord.applicationId !== "string")
     throw new Error("Application ID must be text");
   s.discord.applicationId = s.discord.applicationId.trim();
   if (
+    s.discord.useCustomApplication &&
     (s.discord.enabled || s.discord.applicationId) &&
     !/^\d{17,20}$/.test(s.discord.applicationId)
   )
     throw new Error(
-      "Discord application ID must be 17–20 digits. Copy it from your Discord application’s General Information page.",
+      "Enter a valid custom Discord application ID (17–20 digits), or turn off the custom application option to use CHUD Studio.",
     );
   return s;
 }

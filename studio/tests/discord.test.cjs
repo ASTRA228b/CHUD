@@ -1,12 +1,10 @@
+const { fakeDiscord } = require("./helpers/discord-server.cjs");
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const net = require("node:net");
-const path = require("node:path");
-const os = require("node:os");
-const { once } = require("node:events");
+
 const {
   DiscordPresence,
-  frame,
+
   activityFor,
   ipcPaths,
 } = require("../electron/discord.cjs");
@@ -18,77 +16,14 @@ const settings = {
   showFile: true,
   showElapsed: true,
 };
+const { APPLICATION_ID } = require("../electron/discord-identity.cjs");
+const { defaults } = require("../electron/settings.cjs");
 async function waitFor(predicate) {
   const end = Date.now() + 3000;
   while (!predicate()) {
     if (Date.now() > end) throw new Error("Timed out");
     await sleep(5);
   }
-}
-async function fakeDiscord({
-  reject = false,
-  fragment = false,
-  invalid = false,
-} = {}) {
-  const pipe =
-    process.platform === "win32"
-      ? `\\\\.\\pipe\\chud-test-${process.pid}-${Math.random()}`
-      : path.join(
-          os.tmpdir(),
-          `chud-test-${process.pid}-${Math.random()}.sock`,
-        );
-  const messages = [],
-    sockets = new Set();
-  const server = net.createServer((socket) => {
-    sockets.add(socket);
-    socket.on("close", () => sockets.delete(socket));
-    socket.on("error", () => {});
-    let buffer = Buffer.alloc(0);
-    socket.on("data", (chunk) => {
-      buffer = Buffer.concat([buffer, chunk]);
-      while (buffer.length >= 8) {
-        const op = buffer.readUInt32LE(0),
-          size = buffer.readUInt32LE(4);
-        if (buffer.length < size + 8) break;
-        const message = JSON.parse(buffer.subarray(8, 8 + size).toString());
-        buffer = buffer.subarray(8 + size);
-        messages.push({ op, ...message });
-        let reply;
-        if (op === 0)
-          reply = frame(
-            1,
-            invalid ? null : { cmd: "DISPATCH", evt: "READY", data: {} },
-          );
-        else if (message.cmd === "SET_ACTIVITY" && !socket.writableEnded)
-          reply = frame(1, {
-            cmd: "SET_ACTIVITY",
-            evt: reject ? "ERROR" : null,
-            nonce: message.nonce,
-            data: {},
-          });
-        if (reply && !socket.destroyed) {
-          if (fragment) {
-            socket.write(reply.subarray(0, 5));
-            setTimeout(() => {
-              if (!socket.destroyed) socket.write(reply.subarray(5));
-            }, 2);
-          } else socket.write(reply);
-        }
-      }
-    });
-  });
-  server.listen(pipe);
-  await once(server, "listening");
-  return {
-    pipe,
-    messages,
-    sockets,
-    close: async () => {
-      for (const s of sockets) s.destroy();
-      server.close();
-      await once(server, "close");
-    },
-  };
 }
 test("presence uses only explicitly shared basenames and limits field bytes", () => {
   const privateActivity = activityFor(
@@ -219,6 +154,36 @@ test("disabled presence never attempts a connection", () => {
   presence.update({ mode: "Editing" });
   assert.equal(presence.status.state, "disabled");
   presence.dispose();
+});
+test("normal toggle connects using CHUD Studio's built-in application ID", async () => {
+  const server = await fakeDiscord();
+  const presence = new DiscordPresence({
+    paths: [server.pipe],
+    minInterval: 0,
+  });
+  try {
+    presence.configure({ ...defaults.discord, enabled: true });
+    await waitFor(() => presence.status.state === "connected");
+    assert.equal(server.messages[0].client_id, APPLICATION_ID);
+    assert.equal(
+      server.messages.find((m) => m.cmd === "SET_ACTIVITY").args.activity.state,
+      undefined,
+    );
+    presence.configure({
+      ...defaults.discord,
+      enabled: true,
+      useCustomApplication: true,
+      applicationId: settings.applicationId,
+    });
+    await waitFor(
+      () =>
+        presence.status.state === "connected" &&
+        server.messages.some((m) => m.client_id === settings.applicationId),
+    );
+  } finally {
+    presence.dispose();
+    await server.close();
+  }
 });
 test("reducing sharing clears published names immediately and reconnects privately", async () => {
   const server = await fakeDiscord();

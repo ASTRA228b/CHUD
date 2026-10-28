@@ -3,6 +3,7 @@ const path = require("node:path");
 const os = require("node:os");
 const { randomUUID } = require("node:crypto");
 const { EventEmitter } = require("node:events");
+const { applicationIdFor } = require("./discord-identity.cjs");
 
 const MAX_FRAME = 1024 * 1024;
 function frame(opcode, payload) {
@@ -87,6 +88,7 @@ class DiscordPresence extends EventEmitter {
     this.emit("status", this.status);
   }
   configure(settings) {
+    settings = { ...settings, applicationId: applicationIdFor(settings) };
     const lessSharing = ["showProject", "showFile", "showElapsed"].some(
       (key) => this.settings[key] && !settings[key],
     );

@@ -21,6 +21,7 @@ test("Discord setting defaults off and persists through app restarts", async () 
       discord: {
         ...initial.discord,
         enabled: true,
+        useCustomApplication: true,
         applicationId: "123456789012345678",
         showFile: true,
       },
@@ -31,7 +32,12 @@ test("Discord setting defaults off and persists through app restarts", async () 
     await assert.rejects(
       store.save({
         ...initial,
-        discord: { ...initial.discord, enabled: true, applicationId: "wrong" },
+        discord: {
+          ...initial.discord,
+          enabled: true,
+          useCustomApplication: true,
+          applicationId: "wrong",
+        },
       }),
       /application ID/,
     );
@@ -57,7 +63,11 @@ test("settings reject unsafe URLs, invalid IDs and malformed types", () => {
     () =>
       validateSettings({
         ...defaults,
-        discord: { ...defaults.discord, applicationId: "bot-token" },
+        discord: {
+          ...defaults.discord,
+          useCustomApplication: true,
+          applicationId: "bot-token",
+        },
       }),
     /application ID/,
   );
@@ -70,4 +80,26 @@ test("settings reject unsafe URLs, invalid IDs and malformed types", () => {
       .mainBaseUrl,
     "http://localhost:8000",
   );
+});
+test("shared identity allows enabling without an ID and preserves legacy custom settings", () => {
+  const standard = validateSettings({
+    ...defaults,
+    discord: { ...defaults.discord, enabled: true },
+  });
+  assert.equal(standard.discord.enabled, true);
+  assert.equal(standard.discord.useCustomApplication, false);
+  assert.equal(standard.discord.applicationId, "");
+  const legacy = validateSettings({
+    discord: { enabled: true, applicationId: "123456789012345678" },
+  });
+  assert.equal(legacy.discord.useCustomApplication, true);
+  const cleared = validateSettings({
+    ...defaults,
+    discord: {
+      ...defaults.discord,
+      enabled: true,
+      applicationId: "old-invalid-value",
+    },
+  });
+  assert.equal(cleared.discord.useCustomApplication, false);
 });

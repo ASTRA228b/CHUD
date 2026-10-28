@@ -766,6 +766,15 @@ summary {
   margin-top: 15px;
   color: #aaa6ba;
 }
+.discord-advanced {
+  margin-top: 16px;
+  border-top: 1px solid #35323f;
+  padding-top: 10px;
+}
+.discord-advanced summary {
+  padding: 8px 0;
+  font-size: 12px;
+}
 .settings > .error {
   padding: 12px 25px;
 }

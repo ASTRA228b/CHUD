@@ -1,5 +1,6 @@
 export interface DiscordSettings {
   enabled: boolean;
+  useCustomApplication: boolean;
   applicationId: string;
   showProject: boolean;
   showFile: boolean;

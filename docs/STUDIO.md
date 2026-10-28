@@ -10,9 +10,11 @@ Ctrl+, opens settings. Editor size, indentation, wrapping, autosave, compiler lo
 
 ## Discord
 
-Rich Presence defaults off. Enable it only after entering a valid Discord application ID. A bot token is neither accepted nor required. A running Discord desktop client receives activity through local IPC using the documented handshake and SET_ACTIVITY messages. The client probes ten pipes, handles fragmented frames and pings, waits for acknowledgement, throttles changes and retries if Discord closes. Connection state appears in settings and the status bar.
+Rich Presence defaults off. Enable **Show CHUD Studio on Discord** and save; the built-in registered identity makes this work without an application ID, bot token, or login. An optional custom ID is available under **Advanced Discord options**. Existing saved custom IDs remain selected during migration. A running Discord desktop client receives activity through local IPC using the documented handshake and SET_ACTIVITY messages. The client probes ten pipes, handles fragmented frames and pings, waits for acknowledgement, throttles changes and retries if Discord closes. Connection state appears in settings and the status bar.
 
 Sharing project and active filename defaults off. Enable either individually. Full paths and source content never enter presence payloads. Elapsed time is the current Studio session. Turning presence off or exiting sends null activity and closes the connection. The Discord account's own activity-privacy settings determine whether others can see it. Application assets are not bundled into Discord; an application icon can be configured in the Developer Portal.
+
+The UI smoke test supplies a local IPC test server using `--chud-test-mode` plus `CHUD_DISCORD_TEST_PIPE`; the override is ignored outside explicit test mode. It verifies enabling with no ID, connection acknowledgement, optional custom-ID validation, and clearing on disable without touching the user's Discord activity.
 
 ## Safety and current scope
 

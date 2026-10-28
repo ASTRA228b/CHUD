@@ -17,8 +17,10 @@ export default function SettingsPanel({
   const [busy, setBusy] = useState(false);
   const set = <K extends keyof Settings>(key: K, v: Settings[K]) =>
     setDraft((s) => ({ ...s, [key]: v }));
-  const discord = (key: keyof Settings["discord"], v: string | boolean) =>
+  const discord = (key: keyof Settings["discord"], v: string | boolean) => {
+    setError("");
     setDraft((s) => ({ ...s, discord: { ...s.discord, [key]: v } }));
+  };
   return (
     <div className="modal-backdrop">
       <section
@@ -105,7 +107,7 @@ export default function SettingsPanel({
           <div className="setting-toggle">
             <div>
               <strong>Show CHUD Studio on Discord</strong>
-              <p>Share your coding activity while Studio is open.</p>
+              <p>Show what you’re working on. No account setup needed.</p>
             </div>
             <input
               aria-label="Enable Discord Rich Presence"
@@ -115,19 +117,10 @@ export default function SettingsPanel({
               onChange={(e) => discord("enabled", e.target.checked)}
             />
           </div>
-          <label>
-            Discord application ID
-            <input
-              inputMode="numeric"
-              placeholder="Application ID from the Discord Developer Portal"
-              value={draft.discord.applicationId}
-              onChange={(e) => discord("applicationId", e.target.value)}
-            />
-          </label>
           <p className="hint">
-            Create an application named CHUD Studio in the Discord Developer
-            Portal and copy its application ID. Discord desktop must be running.
-            No bot token or account password is needed.
+            Keep Discord desktop open. Your activity updates automatically after
+            you save settings. No application ID, bot token, or login is
+            required.
           </p>
           <label className="check">
             <input
@@ -161,6 +154,33 @@ export default function SettingsPanel({
             <span className="dot" />
             {presence.message}
           </div>
+          <details className="discord-advanced">
+            <summary>Advanced Discord options</summary>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={draft.discord.useCustomApplication}
+                onChange={(e) =>
+                  discord("useCustomApplication", e.target.checked)
+                }
+              />
+              Use a custom Discord application
+            </label>
+            {draft.discord.useCustomApplication && (
+              <label>
+                Custom application ID
+                <input
+                  inputMode="numeric"
+                  placeholder="17–20 digit application ID"
+                  value={draft.discord.applicationId}
+                  onChange={(e) => discord("applicationId", e.target.value)}
+                />
+              </label>
+            )}
+            <p className="hint">
+              Leave this off to use the built-in CHUD Studio identity.
+            </p>
+          </details>
           <h3>ChudGPT</h3>
           <label>
             Main and Plato API base URL
@@ -207,7 +227,13 @@ export default function SettingsPanel({
                 await save(draft);
                 close();
               } catch (e) {
-                setError(String(e));
+                const message = e instanceof Error ? e.message : String(e);
+                setError(
+                  message.replace(
+                    /^Error invoking remote method '[^']+': (?:Error: )?/,
+                    "",
+                  ),
+                );
               } finally {
                 setBusy(false);
               }

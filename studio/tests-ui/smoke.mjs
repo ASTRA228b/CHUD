@@ -6,12 +6,16 @@ import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { createProject } from "../../tools/chud/project.mjs";
+import { fakeDiscord } from "../tests/helpers/discord-server.cjs";
+import { APPLICATION_ID } from "../electron/discord-identity.cjs";
 
 const studio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "chud-studio-ui-"));
 const workspace = path.join(temporary, "StudioTest");
 await createProject(workspace);
 const env = { ...process.env };
+const discord = await fakeDiscord();
+env.CHUD_DISCORD_TEST_PIPE = discord.pipe;
 delete env.ELECTRON_RUN_AS_NODE;
 let app, page;
 const errors = [];
@@ -20,6 +24,7 @@ try {
     executablePath: electronPath,
     args: [
       studio,
+      "--chud-test-mode",
       `--workspace=${workspace}`,
       `--user-data-dir=${path.join(temporary, "profile")}`,
     ],
@@ -39,11 +44,36 @@ try {
     name: "Enable Discord Rich Presence",
   });
   assert.equal(await toggle.isChecked(), false);
+  await expect(
+    page.getByLabel("Custom application ID", { exact: true }),
+  ).toHaveCount(0);
   await toggle.check();
   await page
     .getByRole("button", { name: "Save settings", exact: true })
     .click();
-  await page.getByRole("alert").filter({ hasText: "application ID" }).waitFor();
+  await page
+    .getByRole("heading", { name: "Studio settings" })
+    .waitFor({ state: "hidden" });
+  await expect
+    .poll(() => discord.messages.some((m) => m.client_id === APPLICATION_ID))
+    .toBe(true);
+  await page.getByTitle("Settings (Ctrl+,)", { exact: true }).click();
+  await expect(page.locator(".connection")).toHaveText("Connected to Discord");
+  assert.equal(await toggle.isChecked(), true);
+  await page.getByText("Advanced Discord options", { exact: true }).click();
+  await page
+    .getByLabel("Use a custom Discord application", { exact: true })
+    .check();
+  await page
+    .getByRole("button", { name: "Save settings", exact: true })
+    .click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "custom Discord application ID" })
+    .waitFor();
+  await page
+    .getByLabel("Use a custom Discord application", { exact: true })
+    .uncheck();
   await toggle.uncheck();
   await page.getByLabel("Share active filename", { exact: true }).check();
   await page
@@ -147,6 +177,7 @@ try {
     await fs.readFile(path.join(temporary, "profile/settings.json"), "utf8"),
   );
   assert.equal(saved.discord.enabled, false);
+  assert.equal(saved.discord.useCustomApplication, false);
   assert.equal(saved.discord.showFile, true);
   console.log(
     "Studio UI passed: edit/save, path protection, settings validation and persistence, failed builds, native Run, PowerShell output, no page errors.",
@@ -166,5 +197,6 @@ try {
     });
     await app.close();
   }
+  await discord.close();
   await fs.rm(temporary, { recursive: true, force: true });
 }
