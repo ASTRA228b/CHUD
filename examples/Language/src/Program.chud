@@ -1,0 +1,22 @@
+chud CHUD.Language;
+use CHUD.Core;
+
+func Square(value: int) -> int
+{
+    return value * value;
+}
+
+public func Main() -> int
+{
+    mut total = 0;
+    for number in 0..10
+    {
+        total += Square(number);
+    }
+    CHUD.Print(total);
+    if total == 285
+    {
+        CHUD.Print("Functions, ranges, and arithmetic work.");
+    }
+    return 0;
+}

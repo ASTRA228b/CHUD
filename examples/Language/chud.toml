@@ -1,0 +1,5 @@
+[project]
+name = "Language"
+version = "0.1.0"
+type = "executable"
+entry = "src/Program.chud"

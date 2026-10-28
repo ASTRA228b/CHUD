@@ -1,0 +1,9 @@
+build/
+.chud/
+.tools/
+node_modules/
+dist/
+out/
+*.log
+*.user
+.DS_Store

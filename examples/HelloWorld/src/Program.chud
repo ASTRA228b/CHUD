@@ -1,0 +1,9 @@
+chud CHUD.App;
+
+use CHUD.Core;
+
+public func Main() -> int
+{
+    CHUD.Print("Hello from CHUD!");
+    return 0;
+}

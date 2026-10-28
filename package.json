@@ -1,0 +1,16 @@
+{
+  "name": "chud-tooling",
+  "version": "0.1.0-alpha",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests",
+    "chud": "node tools/chud/chud.mjs"
+  },
+  "dependencies": {
+    "@iarna/toml": "2.2.5"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

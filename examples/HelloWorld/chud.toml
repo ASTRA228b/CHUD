@@ -1,0 +1,11 @@
+[project]
+name = "HelloCHUD"
+version = "0.1.0"
+type = "executable"
+entry = "src/Program.chud"
+
+[build]
+target = "windows-x64"
+optimization = "debug"
+
+[dependencies]
