@@ -295,5 +295,71 @@ class DiscordPresence extends EventEmitter {
     this.disconnect(true);
     this.setStatus("disabled", "Discord Rich Presence is off");
   }
+  shutdown(timeout = 750) {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    const socket = this.socket;
+    if (!socket || socket.destroyed || !this.ready) {
+      this.dispose();
+      return Promise.resolve();
+    }
+    this.settings.enabled = false;
+    ++this.generation;
+    clearTimeout(this.retryTimer);
+    clearTimeout(this.sendTimer);
+    clearTimeout(this.handshakeTimer);
+    this.socket = null;
+    this.ready = false;
+    this.inflight = null;
+    this.lastPayload = "";
+    socket.removeAllListeners("data");
+    const nonce = randomUUID();
+    this.shutdownPromise = new Promise((resolve) => {
+      let done = false;
+      let buffer = Buffer.alloc(0);
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        socket.destroy();
+        this.setStatus("disabled", "Discord Rich Presence is off");
+        resolve();
+      };
+      // Keep the process alive briefly for Discord to acknowledge the clear.
+      const timer = setTimeout(finish, timeout);
+      socket.once("error", finish);
+      socket.once("close", finish);
+      socket.on("data", (chunk) => {
+        buffer = Buffer.concat([buffer, chunk]);
+        while (buffer.length >= 8) {
+          const opcode = buffer.readUInt32LE(0),
+            length = buffer.readUInt32LE(4);
+          if (length > MAX_FRAME) return finish();
+          if (buffer.length < length + 8) return;
+          const data = buffer.subarray(8, length + 8);
+          buffer = buffer.subarray(length + 8);
+          if (opcode === 3) {
+            socket.write(frame(4, data));
+            continue;
+          }
+          if (opcode !== 1) continue;
+          try {
+            const message = JSON.parse(data.toString("utf8"));
+            if (message?.cmd === "SET_ACTIVITY" && message.nonce === nonce)
+              return finish();
+          } catch {
+            return finish();
+          }
+        }
+      });
+      socket.write(
+        frame(1, {
+          cmd: "SET_ACTIVITY",
+          args: { pid: process.pid, activity: null },
+          nonce,
+        }),
+      );
+    });
+    return this.shutdownPromise;
+  }
 }
 module.exports = { DiscordPresence, frame, ipcPaths, activityFor };
