@@ -8,7 +8,9 @@ The implemented subset is deliberately small. UTF-8 source accepts an optional B
 
 `bool` has the values `true` and `false`. `&&` and `||` short circuit. `!` negates a boolean. Comparison and equality yield booleans.
 
-`string` currently means an immutable UTF-8 literal in process-lifetime static storage. Escapes are `\n`, `\r`, `\t`, `\"` and `\\`. NUL and raw line breaks are rejected. Equality compares byte contents. String concatenation, indexing and dynamic strings are future work.
+`string` is immutable UTF-8 text. Literals use process-lifetime static storage; library-produced strings use bounded process-lifetime runtime allocations. Escapes are `\n`, `\r`, `\t`, `\"` and `\\`. NUL and raw line breaks are rejected. Equality compares byte contents. Use CHUD.Text for concatenation and slicing; `+` and index syntax are not string operations.
+
+`list` is a mutable, runtime-owned integer collection from CHUD.Collections. Variables and function parameters/returns can use it. Assigning or passing a list aliases the same collection; equality compares collection identity. Read/write items through checked library functions, not index syntax. A `let` prevents rebinding, not mutation of the collection.
 
 `void` is allowed only as a function result. It cannot be stored or printed. Other primitive names from the master brief are reserved design targets and rejected as unsupported types.
 
@@ -46,10 +48,10 @@ Ranges are ascending and upper-exclusive. Bounds are integers evaluated once. A 
 
 Operator precedence, tightest first: unary `- !`; `* / %`; `+ -`; `< <= > >=`; `== !=`; `&&`; `||`. Binary operators associate left. Calls and function arguments evaluate left to right.
 
-`chud CHUD.App;` declares an accepted module header. `use CHUD.Core;` selects the only implemented builtins. This milestone has one global function namespace across project sources; named user-module resolution and visibility enforcement beyond the public Main requirement are future work. Other imports are rejected.
+`chud CHUD.App;` declares an accepted module header. `use CHUD.Core;` and the native library imports listed in [Libraries](LIBRARIES.md) validate available module names. Calls remain fully qualified and imports do not introduce aliases. This milestone has one global user-function namespace across project sources; named user-module resolution and visibility enforcement beyond the public Main requirement are future work. Unrecognized library imports are rejected.
 
 ## Memory and interoperability
 
-Values are scalar locals and static strings. There are no heap objects, references, pointers, resource handles or `unsafe` operations available to user code yet. Scalar values copy; strings refer to immutable, process-lifetime storage. This is the entire implemented lifetime model; no borrow checker, garbage collector or allocator API is promised. Extending it to deterministic resource cleanup requires a new language milestone.
+Scalar values copy. Strings are immutable; lists alias mutable collections. Library allocations remain valid until process exit and are freed there, with a 64 MiB live allocation budget. Text results are limited to 16 MiB and lists to one million integers. There is no user pointer, `unsafe`, borrow checker, garbage collector or allocator API. See [library limits](LIBRARIES.md) before writing allocation-heavy loops. GUI resources have native shutdown cleanup.
 
-Structs, reference types, traits, generics, collections, `match`, Result, nullability, async, defer, FFI and advanced keywords in the brief are unimplemented. The parser rejects these constructs rather than compiling substitutes.
+Structs, user reference types, traits, generics, generic collections, `match`, Result, nullability, async, defer, FFI and advanced keywords in the brief are unimplemented. The parser rejects these constructs rather than compiling substitutes.

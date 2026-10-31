@@ -38,6 +38,103 @@ try {
     .first()
     .waitFor();
   await page.locator(".monaco-editor").first().waitFor();
+  await expect(
+    page.getByRole("tab", { name: "Basic assistant", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  const originalStarterFile = await fs.readFile(
+    path.join(workspace, "src/Program.chud"),
+    "utf8",
+  );
+  const modelRequests = [];
+  page.on("request", (request) => {
+    if (/chudgpt.*vercel\.app/.test(request.url()))
+      modelRequests.push(request.url());
+  });
+  await page
+    .getByLabel("Starter template", { exact: true })
+    .selectOption("counter");
+  await expect(page.getByLabel("Starter source preview")).toContainText(
+    "CHUD.GUI.BeginFrame",
+  );
+  await page.getByLabel("Program title or greeting").fill('My "CHUD" window');
+  await page
+    .getByRole("button", { name: "Review replacement", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: /Review replacement/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Reject", exact: true }).click();
+  assert.equal(
+    await fs.readFile(path.join(workspace, "src/Program.chud"), "utf8"),
+    originalStarterFile,
+  );
+  await page
+    .getByRole("tab", { name: "Library reference", exact: true })
+    .click();
+  await page.getByLabel("Search libraries").fill("GUILayout");
+  await expect(
+    page.getByRole("button", {
+      name: "Copy CHUD.GUILayout.Slider",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("tab", { name: "Starter programs", exact: true })
+    .click();
+  await page
+    .getByLabel("Starter template", { exact: true })
+    .selectOption("hello");
+  await page.getByLabel("Program title or greeting").fill("Hello from CHUD!");
+  await page
+    .getByRole("button", { name: "Review replacement", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Approve and apply", exact: true })
+    .click();
+  await page.keyboard.press("Control+s");
+  await expect
+    .poll(() => fs.readFile(path.join(workspace, "src/Program.chud"), "utf8"))
+    .toContain("Hello from CHUD!");
+  await page
+    .getByLabel("New file path", { exact: true })
+    .fill("src/Starter.chud");
+  await page
+    .getByRole("button", { name: "Create new source file", exact: true })
+    .click();
+  await expect
+    .poll(() => fs.readFile(path.join(workspace, "src/Starter.chud"), "utf8"))
+    .toContain("Hello from CHUD!");
+  await expect(page.locator(".basic-message")).toHaveText(
+    "Created starter file.",
+  );
+  await page
+    .getByRole("button", { name: "Create new source file", exact: true })
+    .click();
+  await expect(page.locator(".basic-message")).toContainText("EEXIST");
+  assert.match(
+    await fs.readFile(path.join(workspace, "src/Starter.chud"), "utf8"),
+    /Hello from CHUD!/,
+  );
+  await page
+    .getByRole("button", { name: "Close Starter.chud", exact: true })
+    .click();
+  await fs.unlink(path.join(workspace, "src/Starter.chud"));
+  await page.getByTitle("Refresh files", { exact: true }).click();
+  assert.deepEqual(
+    modelRequests,
+    [],
+    "Basic assistant must not call model endpoints",
+  );
+  await page.getByRole("tab", { name: "ChudGPT AI", exact: true }).click();
+  await expect(page.getByLabel("ChudGPT model")).toBeVisible();
+  await page.getByRole("tab", { name: "Basic assistant", exact: true }).click();
+  await page.getByRole("button", { name: /Search Studio/ }).click();
+  await page
+    .getByLabel("Search commands", { exact: true })
+    .fill("View: Terminal");
+  await page.getByLabel("Search commands", { exact: true }).press("Enter");
+  await expect(page.getByLabel("PowerShell command")).toBeVisible();
+  await page.getByRole("button", { name: "Output", exact: true }).click();
   await page.getByTitle("Settings (Ctrl+,)", { exact: true }).click();
   await page.getByRole("heading", { name: "Studio settings" }).waitFor();
   const toggle = page.getByRole("switch", {
@@ -180,7 +277,7 @@ try {
   assert.equal(saved.discord.useCustomApplication, false);
   assert.equal(saved.discord.showFile, true);
   console.log(
-    "Studio UI passed: edit/save, path protection, settings validation and persistence, failed builds, native Run, PowerShell output, no page errors.",
+    "Studio UI passed: Basic assistant templates/preview/diff, no model requests, library reference, command search, AI mode, edit/save, path protection, settings validation and persistence, failed builds, native Run, PowerShell output, no page errors.",
   );
 } catch (e) {
   if (page) {

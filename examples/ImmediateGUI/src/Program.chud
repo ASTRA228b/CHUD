@@ -1,0 +1,24 @@
+chud CHUD.App;
+use CHUD.Core;
+use CHUD.GUI;
+use CHUD.GUILayout;
+
+public func Main() -> int {
+    mut clicks = 0;
+    mut enabled = true;
+    mut volume = 50;
+    CHUD.GUI.Open("CHUD Immediate GUI", 560, 460);
+    while CHUD.GUI.BeginFrame() {
+        CHUD.GUILayout.Label("A native CHUD window. No Unity runtime needed.");
+        CHUD.GUILayout.Value("Clicks", clicks);
+        if CHUD.GUILayout.Button("Add one") { clicks += 1; }
+        if CHUD.GUILayout.Button("Reset counter") { clicks = 0; }
+        enabled = CHUD.GUILayout.Toggle("Enable sound", enabled);
+        volume = CHUD.GUILayout.Slider("Volume", volume, 0, 100);
+        CHUD.GUILayout.Space(10);
+        CHUD.GUILayout.Label("Tab changes focus. Enter activates. Arrows adjust sliders.");
+        if CHUD.GUILayout.Button("Close window") { CHUD.GUI.Close(); }
+        CHUD.GUI.EndFrame();
+    }
+    return 0;
+}

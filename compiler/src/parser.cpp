@@ -1,3 +1,4 @@
+#include "chud/builtins.hpp"
 #include "chud/frontend.hpp"
 #include <algorithm>
 
@@ -29,6 +30,8 @@ class Parser {
       return Type::Bool;
     if (t.text == "string")
       return Type::String;
+    if (t.text == "list")
+      return Type::List;
     if (allowVoid && t.text == "void")
       return Type::Void;
     throw Failure(t.span, "Unsupported type '" + t.text + "' in this alpha");
@@ -213,9 +216,9 @@ public:
           while (eat("."))
             name += "." + expect("identifier").text;
           expect(";");
-          if (tokens[before].kind == "use" && name != "CHUD.Core")
-            throw Failure(tokens[before].span,
-                          "Only CHUD.Core is available in this alpha");
+          if (tokens[before].kind == "use" && !libraryAvailable(name))
+            throw Failure(tokens[before].span, "Unknown library '" + name +
+                                                   "'. See docs/LIBRARIES.md");
         } else if (at("public") || at("func")) {
           bool pub = eat("public");
           p.functions.push_back(function(pub));

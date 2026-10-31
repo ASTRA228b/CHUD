@@ -8,7 +8,17 @@ The terminal executes a PowerShell command in the selected workspace and capture
 
 Ctrl+, opens settings. Editor size, indentation, wrapping, autosave, compiler location, build configuration, API URLs/timeout and Discord preferences persist under Electron's user data directory in settings.json. Invalid values fail before writing. A damaged file falls back to defaults with a visible warning.
 
-## Discord
+## Menus, search and Basic assistant
+
+Studio uses compact dark tool windows, an active-document tab strip, Solution Explorer, a green Run action and purple status bar inspired by Visual Studio 2022. File/Edit/View/Build/Tools are functional native menus. Ctrl+Q opens searchable commands, Ctrl+P finds files, Ctrl+Shift+B builds, Ctrl+F5 runs without a debugger, Shift+F5 stops, and Ctrl+Shift+S saves all. Editor cursor line/column appears in the status bar. A debugger is not supplied.
+
+The assistant pane opens in **Basic assistant**, a local template tool, separate from **ChudGPT AI**. Ten starters cover console, math, text, lists, dice, file IO, a GUI counter/dashboard, game helpers, and timing. Choose a starter and edit its title/greeting; the preview updates deterministically. Copy source, review a replacement for the active CHUD file, or create a new source file. New files are created exclusively and existing paths are rejected. Replacements require approval in the diff, and then a save. Keep only one Main function in a project when creating new starter files.
+
+Basic assistant makes no network/model calls, reads no chat context, and remains available offline. The Library reference tab searches all native signatures and copies calls. Monaco completion and the standalone LSP include the same catalog. The ChudGPT AI tab preserves the existing four model adapters, explicit context choices and reviewed code replacements; basic templates are not fabricated AI responses.
+
+Run `powershell -File scripts/create-shortcut.ps1` from the checkout after building Studio to create/update `CHUD Studio.lnk` on the current user's actual Desktop (including OneDrive redirection). It targets the installed local Electron executable, points it at Studio, and uses the CHUD icon. Moving the checkout requires rerunning the script; this is not an installer.
+
+## Discord Rich Presence
 
 Rich Presence defaults off. Enable **Show CHUD Studio on Discord** and save; the built-in registered identity makes this work without an application ID, bot token, or login. An optional custom ID is available under **Advanced Discord options**. Existing saved custom IDs remain selected during migration. A running Discord desktop client receives activity through local IPC using the documented handshake and SET_ACTIVITY messages. The client probes ten pipes, handles fragmented frames and pings, waits for acknowledgement, throttles changes and retries if Discord closes. Connection state appears in settings and the status bar.
 

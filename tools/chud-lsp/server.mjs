@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { compilerPath } from "../chud/project.mjs";
+import { libraryFunctions } from "../chud/libraries.mjs";
 
 const documents = new Map();
 let input = Buffer.alloc(0),
@@ -167,7 +168,11 @@ async function handle(message) {
         "true",
         "false",
       ].map((label) => ({ label, kind: 14 })),
-      ...["int", "bool", "string", "void"].map((label) => ({ label, kind: 7 })),
+      ...["int", "bool", "string", "void", "list"].map((label) => ({
+        label,
+        kind: 7,
+      })),
+      ...libraryFunctions,
       ...["CHUD.Print", "CHUD.Warn", "CHUD.Error"].map((label) => ({
         label,
         kind: 3,

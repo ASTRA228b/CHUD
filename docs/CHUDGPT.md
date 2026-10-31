@@ -1,5 +1,7 @@
 # ChudGPT integration
 
+Studio's **Basic assistant** is a separate offline template generator, not a model adapter or fallback response. It creates starter source locally and requires review before replacing a file. **ChudGPT AI** retains the real network-backed model adapters described below.
+
 Contracts were checked against the [published API guide](https://chudgpt-landing.vercel.app/api-guide) and the existing repository's API implementation. All four model info routes returned HTTP 200 during initial validation. No live generation claim follows from that result; generation is owner-hosted and can be unavailable.
 
 | Model              | Default route prefix                                      | Request                   |

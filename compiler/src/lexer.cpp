@@ -172,6 +172,8 @@ std::string typeName(Type t) {
     return "bool";
   case Type::String:
     return "string";
+  case Type::List:
+    return "list";
   default:
     return "void";
   }

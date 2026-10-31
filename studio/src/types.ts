@@ -84,6 +84,7 @@ export interface ChudAPI {
   onOutput(cb: (text: string) => void): () => void;
   onPresence(cb: (status: Presence) => void): () => void;
   onCloseRequest(cb: () => void): () => void;
+  onCommand(cb: (command: string) => void): () => void;
 }
 declare global {
   interface Window {
