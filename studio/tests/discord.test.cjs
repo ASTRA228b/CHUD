@@ -16,7 +16,10 @@ const settings = {
   showFile: true,
   showElapsed: true,
 };
-const { APPLICATION_ID, LOGO_URL } = require("../electron/discord-identity.cjs");
+const {
+  APPLICATION_ID,
+  LOGO_URL,
+} = require("../electron/discord-identity.cjs");
 const { defaults } = require("../electron/settings.cjs");
 async function waitFor(predicate) {
   const end = Date.now() + 3000;
@@ -159,6 +162,50 @@ test("disabled presence never attempts a connection", () => {
   presence.update({ mode: "Editing" });
   assert.equal(presence.status.state, "disabled");
   presence.dispose();
+});
+
+test("graceful shutdown clears and waits for the matching acknowledgement", async () => {
+  const server = await fakeDiscord({ fragment: true });
+  const presence = new DiscordPresence({
+    paths: [server.pipe],
+    minInterval: 0,
+  });
+  try {
+    presence.configure(settings);
+    await waitFor(() => presence.status.state === "connected");
+    await presence.shutdown();
+    assert.equal(presence.status.state, "disabled");
+    assert.ok(
+      server.messages.some(
+        (m) => m.cmd === "SET_ACTIVITY" && m.args.activity === null,
+      ),
+    );
+    assert.equal(presence.socket, null);
+    await waitFor(() => server.sockets.size === 0);
+  } finally {
+    presence.dispose();
+    await server.close();
+  }
+});
+
+test("shutdown is bounded if Discord never acknowledges the clear", async () => {
+  const server = await fakeDiscord({ ignoreClear: true });
+  const presence = new DiscordPresence({
+    paths: [server.pipe],
+    minInterval: 0,
+  });
+  try {
+    presence.configure(settings);
+    await waitFor(() => presence.status.state === "connected");
+    const started = Date.now();
+    await presence.shutdown(40);
+    assert.ok(Date.now() - started < 1000);
+    assert.equal(presence.status.state, "disabled");
+    await waitFor(() => server.sockets.size === 0);
+  } finally {
+    presence.dispose();
+    await server.close();
+  }
 });
 test("normal toggle connects using CHUD Studio's built-in application ID", async () => {
   const server = await fakeDiscord();

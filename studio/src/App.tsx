@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Editor, { DiffEditor } from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import type { Diagnostic, Document, Entry, Presence, State } from "./types";
 import SettingsPanel from "./Settings";
 import AssistantPanel from "./Assistant";
 import logo from "../assets/chud.svg";
+import ReviewDiff from "./ReviewDiff";
 
 function Tree({
   entries,
@@ -77,11 +78,7 @@ export default function App() {
     [search, setSearch] = useState(""),
     [searchOpen, setSearchOpen] = useState(false);
   const editor = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
-  const diffEditor = useRef<Monaco.editor.IStandaloneDiffEditor | null>(null);
   const closeReview = () => {
-    // Detach the models before React's Monaco wrapper disposes them.
-    diffEditor.current?.setModel(null);
-    diffEditor.current = null;
     setReview(null);
   };
   const [commandsOpen, setCommandsOpen] = useState(false),
@@ -812,20 +809,7 @@ export default function App() {
               when ready.
             </p>
             <div className="diff-editor">
-              <DiffEditor
-                original={current.content}
-                modified={review}
-                language="chud"
-                theme="chud-dark"
-                onMount={(editor) => {
-                  diffEditor.current = editor;
-                }}
-                options={{
-                  readOnly: true,
-                  automaticLayout: true,
-                  minimap: { enabled: false },
-                }}
-              />
+              <ReviewDiff original={current.content} modified={review} />
             </div>
             <footer>
               <button onClick={closeReview}>Reject</button>

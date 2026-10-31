@@ -8,6 +8,7 @@ async function fakeDiscord({
   reject = false,
   fragment = false,
   invalid = false,
+  ignoreClear = false,
 } = {}) {
   const pipe =
     process.platform === "win32"
@@ -38,7 +39,11 @@ async function fakeDiscord({
             1,
             invalid ? null : { cmd: "DISPATCH", evt: "READY", data: {} },
           );
-        else if (message.cmd === "SET_ACTIVITY" && !socket.writableEnded)
+        else if (
+          message.cmd === "SET_ACTIVITY" &&
+          !socket.writableEnded &&
+          !(ignoreClear && message.args.activity === null)
+        )
           reply = frame(1, {
             cmd: "SET_ACTIVITY",
             evt: reject ? "ERROR" : null,

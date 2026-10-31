@@ -32,7 +32,7 @@ try {
     timeout: 30000,
   });
   page = await app.firstWindow();
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => errors.push(e.stack || e.message));
   await page
     .getByRole("button", { name: "Run", exact: false })
     .first()

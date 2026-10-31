@@ -24,6 +24,8 @@ Rich Presence defaults off. Enable **Show CHUD Studio on Discord** and save; the
 
 Sharing project and active filename defaults off. Enable either individually. Full paths and source content never enter presence payloads. Elapsed time is the current Studio session. Turning presence off or exiting sends null activity and closes the connection. The Discord account's own activity-privacy settings determine whether others can see it. The card includes the purple CHUD language logo with a CHUD Programming Language tooltip. Discord loads the pinned public PNG through its media proxy; no Developer Portal asset setup is required, including with a custom application ID. Restart Studio after updating its main-process presence code.
 
+Studio runs one instance per user profile. Launching it again restores/focuses the existing window. Closing the final window clears Rich Presence, waits briefly for Discord's acknowledgement and exits the process; it does not minimize to a tray or keep a background presence running. Unsaved changes still require Save/Discard/Cancel; canceling close leaves the app and presence active.
+
 The UI smoke test supplies a local IPC test server using `--chud-test-mode` plus `CHUD_DISCORD_TEST_PIPE`; the override is ignored outside explicit test mode. It verifies enabling with no ID, connection acknowledgement, optional custom-ID validation, and clearing on disable without touching the user's Discord activity.
 
 ## Safety and current scope
