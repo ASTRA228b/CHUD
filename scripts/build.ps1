@@ -34,6 +34,8 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Studio tests failed.' }
             & node tests-ui/smoke.mjs
             if ($LASTEXITCODE -ne 0) { throw 'Studio UI test failed.' }
+            & node tests-ui/lifecycle.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Studio lifecycle test failed.' }
         } finally { Pop-Location }
     }
     Write-Host 'CHUD build and validation succeeded.'
