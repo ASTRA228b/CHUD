@@ -3,7 +3,7 @@ const path = require("node:path");
 const os = require("node:os");
 const { randomUUID } = require("node:crypto");
 const { EventEmitter } = require("node:events");
-const { applicationIdFor } = require("./discord-identity.cjs");
+const { applicationIdFor, LOGO_URL } = require("./discord-identity.cjs");
 
 const MAX_FRAME = 1024 * 1024;
 function frame(opcode, payload) {
@@ -39,7 +39,11 @@ function activityFor(settings, context, startedAt) {
   const mode = ["Editing", "Building", "Running"].includes(context.mode)
     ? context.mode
     : "Idle";
-  const activity = { details: `${mode} in CHUD Studio`, instance: false };
+  const activity = {
+    details: `${mode} in CHUD Studio`,
+    instance: false,
+    assets: { large_image: LOGO_URL, large_text: "CHUD Programming Language" },
+  };
   const names = [];
   if (settings.showProject && safeName(context.project))
     names.push(safeName(context.project));

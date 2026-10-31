@@ -77,6 +77,17 @@ export default function App() {
     [search, setSearch] = useState(""),
     [searchOpen, setSearchOpen] = useState(false);
   const editor = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const diffEditor = useRef<Monaco.editor.IStandaloneDiffEditor | null>(null);
+  const closeReview = () => {
+    // Detach the models before React's Monaco wrapper disposes them.
+    diffEditor.current?.setModel(null);
+    diffEditor.current = null;
+    setReview(null);
+  };
+  const [commandsOpen, setCommandsOpen] = useState(false),
+    [commandQuery, setCommandQuery] = useState("");
+  const [cursor, setCursor] = useState({ line: 1, column: 1 });
+  const commandHandler = useRef<(command: string) => void>(() => {});
   const outputView = useRef<HTMLPreElement | null>(null);
   const monaco = useRef<typeof Monaco | null>(null);
   const docsRef = useRef(docs);
@@ -161,10 +172,14 @@ export default function App() {
         setCloseDialog(true);
       else void window.chud.confirmClose(true);
     });
+    const offCommand = window.chud.onCommand((command) =>
+      commandHandler.current(command),
+    );
     return () => {
       offOutput();
       offPresence();
       offClose();
+      offCommand();
     };
   }, [append]);
   useEffect(() => {
@@ -257,6 +272,70 @@ export default function App() {
         d.path === active ? { ...d, content: content ?? "" } : d,
       ),
     );
+  const commands = [
+    {
+      id: "newProject",
+      name: "File: New project",
+      run: () => setNewProject(true),
+    },
+    {
+      id: "newFile",
+      name: "File: New source file",
+      run: () => setNewFile(true),
+    },
+    {
+      id: "openProject",
+      name: "File: Open project",
+      run: async () => {
+        if (guardSwitch())
+          await applyWorkspace(await window.chud.openProject());
+      },
+    },
+    { id: "save", name: "File: Save active file", run: () => save() },
+    { id: "saveAll", name: "File: Save all", run: saveAll },
+    { id: "findFile", name: "View: Find file", run: () => setSearchOpen(true) },
+    {
+      id: "split",
+      name: "View: Toggle split editor",
+      run: () => setSplit((s) => !s),
+    },
+    {
+      id: "assistant",
+      name: "View: Toggle assistant",
+      run: () => setAssistantVisible((s) => !s),
+    },
+    ...["Output", "Problems", "Terminal"].map((name) => ({
+      id: name.toLowerCase(),
+      name: `View: ${name === "Problems" ? "Error List" : name}`,
+      run: () => setPanel(name),
+    })),
+    ...["check", "build", "run"].map((action) => ({
+      id: action,
+      name: `Build: ${action[0].toUpperCase() + action.slice(1)} project`,
+      run: () => {
+        if (!busy) return build(action);
+      },
+    })),
+    {
+      id: "stop",
+      name: "Build: Stop running process",
+      run: () => window.chud.stop(),
+    },
+    {
+      id: "settings",
+      name: "Tools: Studio settings",
+      run: () => setSettingsOpen(true),
+    },
+  ];
+  commandHandler.current = (id) => {
+    if (id === "commands") {
+      setCommandQuery("");
+      setCommandsOpen(true);
+      return;
+    }
+    const command = commands.find((c) => c.id === id);
+    if (command) Promise.resolve(command.run()).catch(fail);
+  };
   const options: Monaco.editor.IStandaloneEditorConstructionOptions = {
     fontFamily: "'Cascadia Code', 'Consolas', monospace",
     fontSize: state?.settings.fontSize || 14,
@@ -305,6 +384,15 @@ export default function App() {
         </button>
         <span className="project-title">{state.projectName}</span>
         <button
+          className="studio-search"
+          onClick={() => {
+            setCommandQuery("");
+            setCommandsOpen(true);
+          }}
+        >
+          ⌕ Search Studio <kbd>Ctrl Q</kbd>
+        </button>
+        <button
           className="icon-button"
           onClick={() => setSettingsOpen(true)}
           title="Settings (Ctrl+,)"
@@ -332,7 +420,7 @@ export default function App() {
         </button>
         <div className="spacer" />
         <button
-          title="Toggle ChudGPT"
+          title="Toggle assistant"
           className={assistantVisible ? "active" : ""}
           onClick={() => setAssistantVisible((x) => !x)}
         >
@@ -344,7 +432,7 @@ export default function App() {
       </nav>
       <aside className="explorer">
         <div className="panel-heading">
-          <span>{searchOpen ? "FIND FILE" : "EXPLORER"}</span>
+          <span>{searchOpen ? "FIND FILE" : "SOLUTION EXPLORER"}</span>
           <button title="New source file" onClick={() => setNewFile(true)}>
             ＋
           </button>
@@ -478,6 +566,12 @@ export default function App() {
                 onMount={(e, m) => {
                   editor.current = e;
                   monaco.current = m;
+                  e.onDidChangeCursorPosition((event) =>
+                    setCursor({
+                      line: event.position.lineNumber,
+                      column: event.position.column,
+                    }),
+                  );
                 }}
               />
               {split && (
@@ -598,6 +692,19 @@ export default function App() {
             return e?.getModel()?.getValueInRange(e.getSelection()!) || "";
           }}
           review={(code) => setReview(code)}
+          newSource={async (code, relative) => {
+            if (!/\.chud$/i.test(relative))
+              throw new Error("Choose a .chud file path.");
+            const files = await window.chud.newFile(relative);
+            await window.chud.saveFile({ relative, content: code });
+            setState((s) => s && { ...s, files });
+            setDocs((items) => [
+              ...items,
+              { path: relative, content: code, saved: code },
+            ]);
+            setActive(relative);
+            await window.chud.editorContext(relative);
+          }}
         />
       )}
       <footer className="statusbar">
@@ -615,9 +722,70 @@ export default function App() {
               (state.settings.discord.enabled ? presence.state : "off")}
         </button>
         <span>UTF-8</span>
+        <span>
+          Ln {cursor.line}, Col {cursor.column}
+        </span>
         <span>{/\.chud$/i.test(active) ? "CHUD" : "Text"}</span>
         <span>0.1.0-alpha</span>
       </footer>
+      {commandsOpen && (
+        <div className="modal-backdrop" onClick={() => setCommandsOpen(false)}>
+          <section
+            className="modal command-palette"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search Studio commands"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header>
+              <h3>Search Studio</h3>
+              <button
+                aria-label="Close command search"
+                onClick={() => setCommandsOpen(false)}
+              >
+                ×
+              </button>
+            </header>
+            <input
+              autoFocus
+              aria-label="Search commands"
+              placeholder="Search commands…"
+              value={commandQuery}
+              onChange={(e) => setCommandQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setCommandsOpen(false);
+                if (e.key === "Enter") {
+                  const match = commands.find((c) =>
+                    c.name.toLowerCase().includes(commandQuery.toLowerCase()),
+                  );
+                  if (match) {
+                    setCommandsOpen(false);
+                    commandHandler.current(match.id);
+                  }
+                }
+              }}
+            />
+            <div className="command-results">
+              {commands
+                .filter((c) =>
+                  c.name.toLowerCase().includes(commandQuery.toLowerCase()),
+                )
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setCommandsOpen(false);
+                      commandHandler.current(c.id);
+                    }}
+                  >
+                    {c.name}
+                    <span>↵</span>
+                  </button>
+                ))}
+            </div>
+          </section>
+        </div>
+      )}
       {settingsOpen && (
         <SettingsPanel
           value={state.settings}
@@ -637,7 +805,7 @@ export default function App() {
                 <span className="eyebrow">PROPOSED CHANGE</span>
                 <h2>Review replacement · {basename(active)}</h2>
               </div>
-              <button onClick={() => setReview(null)}>✕</button>
+              <button onClick={closeReview}>✕</button>
             </header>
             <p className="hint">
               Review every change. Applying updates your editor buffer; save
@@ -649,6 +817,9 @@ export default function App() {
                 modified={review}
                 language="chud"
                 theme="chud-dark"
+                onMount={(editor) => {
+                  diffEditor.current = editor;
+                }}
                 options={{
                   readOnly: true,
                   automaticLayout: true,
@@ -657,12 +828,12 @@ export default function App() {
               />
             </div>
             <footer>
-              <button onClick={() => setReview(null)}>Reject</button>
+              <button onClick={closeReview}>Reject</button>
               <button
                 className="primary"
                 onClick={() => {
                   change(review);
-                  setReview(null);
+                  closeReview();
                 }}
               >
                 Approve and apply

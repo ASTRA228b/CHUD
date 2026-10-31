@@ -26,6 +26,7 @@ for (const [method, channel] of [
   ["onOutput", "output"],
   ["onPresence", "presence"],
   ["onCloseRequest", "closeRequest"],
+  ["onCommand", "command"],
 ]) {
   api[method] = (callback) => {
     const listener = (_event, data) => callback(data);

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Message, Settings } from "./types";
+import BasicAssistant from "./BasicAssistant";
 
 const names = {
   code: "ChudGPT-Code",
@@ -8,7 +9,7 @@ const names = {
   "plato-mini": "ChudGPT-Plato-Mini",
   public: "ChudGPT-Public",
 };
-export default function AssistantPanel({
+function AIChat({
   settings,
   file,
   content,
@@ -73,7 +74,7 @@ export default function AssistantPanel({
     }
   };
   return (
-    <aside className="assistant">
+    <div className="ai-chat">
       <div className="panel-heading">
         <span className="sparkle">✦</span>
         <strong>ChudGPT</strong>
@@ -254,6 +255,48 @@ export default function AssistantPanel({
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AssistantPanel(
+  props: Parameters<typeof AIChat>[0] & {
+    newSource: (code: string, filename: string) => Promise<void>;
+  },
+) {
+  const [mode, setMode] = useState<"basic" | "ai">("basic");
+  return (
+    <aside className="assistant">
+      <div
+        className="assistant-mode"
+        role="tablist"
+        aria-label="Assistant mode"
+      >
+        <button
+          role="tab"
+          aria-selected={mode === "basic"}
+          onClick={() => setMode("basic")}
+        >
+          Basic assistant
+        </button>
+        <button
+          role="tab"
+          aria-selected={mode === "ai"}
+          onClick={() => setMode("ai")}
+        >
+          ChudGPT AI
+        </button>
+      </div>
+      <div hidden={mode !== "basic"} className="assistant-content">
+        <BasicAssistant
+          file={props.file}
+          review={props.review}
+          newSource={props.newSource}
+        />
+      </div>
+      <div hidden={mode !== "ai"} className="assistant-content">
+        <AIChat {...props} />
       </div>
     </aside>
   );

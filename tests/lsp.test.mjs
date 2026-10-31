@@ -110,6 +110,12 @@ test("LSP framing, incremental edits, compiler diagnostics, symbols and shutdown
       position: { line: 0, character: 0 },
     });
     assert.ok(completions.result.some((c) => c.label === "CHUD.Print"));
+    assert.ok(
+      completions.result.some((c) => c.label === "CHUD.GUILayout.Button"),
+    );
+    assert.ok(
+      completions.result.some((c) => c.label === "CHUD.Collections.New"),
+    );
     const unknown = await request("notSupported", {});
     assert.equal(unknown.error.code, -32601);
     await request("shutdown", null);

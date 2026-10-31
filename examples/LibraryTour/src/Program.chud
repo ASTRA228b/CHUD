@@ -1,0 +1,29 @@
+chud CHUD.App;
+use CHUD.Core;
+use CHUD.Text;
+use CHUD.Math;
+use CHUD.Collections;
+use CHUD.Forge;
+use CHUD.Spark;
+
+public func Main() -> int {
+    CHUD.Print(CHUD.Spark.Badge("CHUD native libraries"));
+    CHUD.Print(CHUD.Text.Upper(CHUD.Text.Trim("  hello from CHUD  ")));
+    CHUD.Print(CHUD.Text.Slice("A🟣é", 1, 2));
+    let scores: list = CHUD.Collections.New();
+    CHUD.Collections.Add(scores, 42);
+    CHUD.Collections.Add(scores, 17);
+    CHUD.Collections.Add(scores, 90);
+    CHUD.Collections.Sort(scores);
+    for i in 0..CHUD.Collections.Count(scores) {
+        CHUD.Print(CHUD.Collections.Get(scores, i));
+    }
+    CHUD.Print(CHUD.Collections.Sum(scores));
+    CHUD.Print(CHUD.Math.Pow(2, 10));
+    mut health = 10;
+    for tick in 0..5 {
+        health = CHUD.Forge.StepToward(health, 100, 18);
+        CHUD.Print(CHUD.Spark.Bar(health, 100, 20));
+    }
+    return 0;
+}

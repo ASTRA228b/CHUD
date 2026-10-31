@@ -1,3 +1,4 @@
+#include "chud/builtins.hpp"
 #include "chud/frontend.hpp"
 #include <iomanip>
 #include <limits>
@@ -12,6 +13,7 @@ std::string llvmType(Type t) {
   case Type::Bool:
     return "i1";
   case Type::String:
+  case Type::List:
     return "ptr";
   default:
     return "void";
@@ -173,8 +175,10 @@ class Generator {
         if (e.args.size() != 1)
           throw Failure(e.token.span, e.value + " requires one argument");
         auto a = expr(*e.args[0]);
-        if (a.type == Type::Void)
-          throw Failure(e.token.span, "Cannot print void");
+        if (a.type == Type::Void || a.type == Type::List)
+          throw Failure(e.token.span,
+                        "Cannot print " + typeName(a.type) +
+                            "; print a collection item or count instead");
         int channel = e.value == "CHUD.Print" ? 0 : 1;
         if (a.type == Type::Bool) {
           auto v = temp();
@@ -185,6 +189,40 @@ class Generator {
              (a.type == Type::String ? "ptr " : "i32 ") + a.ir + ", i32 " +
              std::to_string(channel) + ")");
         return {Type::Void, ""};
+      }
+      for (const auto &builtin : builtins()) {
+        if (builtin.name != e.value)
+          continue;
+        if (e.args.size() != builtin.params.size())
+          throw Failure(e.token.span,
+                        "Wrong argument count for '" + e.value +
+                            "': expected " +
+                            std::to_string(builtin.params.size()));
+        std::string args;
+        for (size_t i = 0; i < e.args.size(); ++i) {
+          auto a = expr(*e.args[i]);
+          require(a.type, builtin.params[i], e.args[i]->token);
+          if (a.type == Type::Bool) {
+            auto widened = temp();
+            emit(widened + " = zext i1 " + a.ir + " to i32");
+            a.ir = widened;
+          }
+          if (i)
+            args += ", ";
+          args +=
+              (a.type == Type::Bool ? "i32" : llvmType(a.type)) + " " + a.ir;
+        }
+        auto v = builtin.result == Type::Void ? "" : temp();
+        const auto nativeType =
+            builtin.result == Type::Bool ? "i32" : llvmType(builtin.result);
+        emit((v.empty() ? "" : v + " = ") + "call " + nativeType + " @" +
+             builtin.symbol + "(" + args + ")");
+        if (builtin.result == Type::Bool) {
+          auto boolean = temp();
+          emit(boolean + " = icmp ne i32 " + v + ", 0");
+          v = boolean;
+        }
+        return {builtin.result, v};
       }
       if (!functions.contains(e.value))
         throw Failure(e.token.span, "Unknown function '" + e.value + "'");
@@ -386,7 +424,20 @@ public:
              << "(" << params << ") {\nentry:\n"
              << allocas.str() << body.str() << "}\n";
     }
-    return "; CHUD generated LLVM IR\n" + globals.str() +
+    std::string declarations;
+    for (const auto &b : builtins()) {
+      declarations += "declare " +
+                      (b.result == Type::Bool ? "i32" : llvmType(b.result)) +
+                      " @" + b.symbol + "(";
+      for (size_t i = 0; i < b.params.size(); ++i) {
+        if (i)
+          declarations += ", ";
+        declarations +=
+            b.params[i] == Type::Bool ? "i32" : llvmType(b.params[i]);
+      }
+      declarations += ")\n";
+    }
+    return "; CHUD generated LLVM IR\n" + globals.str() + declarations +
            "declare void @chud_print_string(ptr, i32)\ndeclare void "
            "@chud_print_int(i32, i32)\ndeclare void @chud_print_bool(i32, "
            "i32)\ndeclare i32 @chud_div(i32, i32)\ndeclare i32 @chud_mod(i32, "

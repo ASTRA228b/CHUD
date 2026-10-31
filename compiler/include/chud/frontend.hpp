@@ -27,7 +27,7 @@ struct Token {
   Span span;
 };
 std::vector<Token> lex(const std::string &source, const std::string &file);
-enum class Type { Int, Bool, String, Void };
+enum class Type { Int, Bool, String, Void, List };
 std::string typeName(Type type);
 struct Expr {
   enum Kind { Integer, Boolean, String, Name, Unary, Binary, Call } kind;

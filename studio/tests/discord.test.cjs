@@ -16,7 +16,7 @@ const settings = {
   showFile: true,
   showElapsed: true,
 };
-const { APPLICATION_ID } = require("../electron/discord-identity.cjs");
+const { APPLICATION_ID, LOGO_URL } = require("../electron/discord-identity.cjs");
 const { defaults } = require("../electron/settings.cjs");
 async function waitFor(predicate) {
   const end = Date.now() + 3000;
@@ -34,6 +34,7 @@ test("presence uses only explicitly shared basenames and limits field bytes", ()
   assert.deepEqual(privateActivity, {
     details: "Editing in CHUD Studio",
     instance: false,
+    assets: { large_image: LOGO_URL, large_text: "CHUD Programming Language" },
     timestamps: { start: 100 },
   });
   const activity = activityFor(
@@ -76,6 +77,10 @@ test("real IPC transport handshakes, accepts fragmented frames, throttles, updat
     const initial = server.messages.find((m) => m.cmd === "SET_ACTIVITY");
     assert.equal(initial.args.pid, process.pid);
     assert.equal(initial.args.activity.state, "Example · Program.chud");
+    assert.deepEqual(initial.args.activity.assets, {
+      large_image: LOGO_URL,
+      large_text: "CHUD Programming Language",
+    });
     presence.update({
       mode: "Building",
       project: "Example",

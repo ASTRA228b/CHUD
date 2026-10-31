@@ -187,8 +187,9 @@ async function setup() {
     height: 940,
     minWidth: 1040,
     minHeight: 680,
-    backgroundColor: "#101015",
+    backgroundColor: "#1e1e1e",
     title: "CHUD Studio",
+    icon: path.join(__dirname, "../assets/chud.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -198,7 +199,71 @@ async function setup() {
     },
   });
   window.setTitle(`${projectName} — CHUD Studio`);
-  Menu.setApplicationMenu(null);
+  const command = (label, id, accelerator) => ({
+    label,
+    accelerator,
+    click: () => send("command", id),
+  });
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: "File",
+        submenu: [
+          command("New Project…", "newProject", "Ctrl+Shift+N"),
+          command("New Source File…", "newFile", "Ctrl+N"),
+          command("Open Project…", "openProject", "Ctrl+Shift+O"),
+          { type: "separator" },
+          command("Save", "save", "Ctrl+S"),
+          command("Save All", "saveAll", "Ctrl+Shift+S"),
+          { type: "separator" },
+          { role: "close" },
+        ],
+      },
+      {
+        label: "Edit",
+        submenu: [
+          { role: "undo" },
+          { role: "redo" },
+          { type: "separator" },
+          { role: "cut" },
+          { role: "copy" },
+          { role: "paste" },
+          { role: "selectAll" },
+        ],
+      },
+      {
+        label: "View",
+        submenu: [
+          command("Find File", "findFile", "Ctrl+P"),
+          command("Split Editor", "split"),
+          command("Assistant", "assistant"),
+          command("Output", "output"),
+          command("Error List", "problems"),
+          command("Terminal", "terminal"),
+          { type: "separator" },
+          { role: "resetZoom" },
+          { role: "zoomIn" },
+          { role: "zoomOut" },
+        ],
+      },
+      {
+        label: "Build",
+        submenu: [
+          command("Build Project", "build", "Ctrl+Shift+B"),
+          command("Check Project", "check"),
+          command("Run Project", "run", "Ctrl+F5"),
+          command("Stop", "stop", "Shift+F5"),
+        ],
+      },
+      {
+        label: "Tools",
+        submenu: [
+          command("Search Studio…", "commands", "Ctrl+Q"),
+          command("Studio Settings…", "settings", "Ctrl+,"),
+        ],
+      },
+    ]),
+  );
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (e) => e.preventDefault());
   window.webContents.session.setPermissionRequestHandler(

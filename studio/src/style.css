@@ -830,3 +830,353 @@ summary {
     gap: 10px;
   }
 }
+
+/* Compact tool windows and document chrome, inspired by VS 2022's dark layout. */
+:root {
+  --accent: #8060b5;
+  --muted: #a5a5ad;
+  --line: #404047;
+  color: #dedee3;
+  background: #1e1e1e;
+}
+button,
+input,
+select,
+textarea {
+  border-radius: 2px;
+}
+.studio {
+  grid-template-columns: 40px 225px minmax(360px, 1fr) 355px;
+  grid-template-rows: 42px minmax(0, 1fr) 24px;
+}
+.studio.assistant-hidden {
+  grid-template-columns: 40px 225px minmax(360px, 1fr);
+}
+.titlebar {
+  background: #292731;
+  gap: 6px;
+  padding: 0 10px;
+}
+.titlebar img {
+  width: 25px;
+  height: 25px;
+}
+.titlebar strong {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+.titlebar button {
+  font-size: 11px;
+}
+.titlebar .studio-search {
+  margin-left: 15px;
+  border: 1px solid #55515d;
+  min-width: 210px;
+  text-align: left;
+  color: #b9b6c4;
+  background: #1f1e25;
+}
+.studio-search kbd {
+  float: right;
+}
+.activity-bar {
+  background: #2d2d30;
+  gap: 3px;
+  padding-top: 4px;
+}
+.activity-bar button {
+  font-size: 21px;
+}
+.explorer,
+.assistant {
+  background: #252526;
+}
+.panel-heading {
+  min-height: 33px;
+  background: #2d2d30;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.workspace-name {
+  padding: 12px 12px 8px;
+  color: #d4d4dc;
+}
+.file,
+.file.selected {
+  font-size: 12px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.file.selected {
+  background: #3f3b4d;
+  color: #fff;
+}
+.editor-area {
+  background: #1e1e1e;
+}
+.buildbar {
+  min-height: 35px;
+  background: #333337;
+  padding-left: 12px;
+}
+.buildbar .primary.run {
+  background: #354b35;
+  border-color: #526c45;
+  color: #b5e4a0;
+}
+.tabs {
+  min-height: 31px;
+  background: #252526;
+}
+.tab {
+  border-top: 0;
+}
+.tab.active {
+  background: #6b4d90;
+  box-shadow: inset 0 2px #b29bd2;
+}
+.tab.active > button:first-child {
+  color: #fff;
+}
+.tab.active .file-icon {
+  color: #e7d7ff;
+}
+.tab button {
+  padding: 5px 7px;
+}
+.bottom-panel {
+  background: #1e1e1e;
+  height: 190px;
+}
+.bottom-tabs {
+  min-height: 30px;
+  background: #2d2d30;
+  gap: 16px;
+}
+.bottom-tabs button {
+  padding: 6px 1px;
+  font-size: 11px;
+}
+.statusbar {
+  background: #614386;
+  color: #ece5f5;
+  border-top: 0;
+}
+.statusbar .branch-indicator,
+.statusbar button {
+  color: #fff;
+}
+.output {
+  color: #d2d2d7;
+  font-size: 12px;
+}
+.assistant-mode,
+.assistant-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  background: #2d2d30;
+  flex-shrink: 0;
+}
+.assistant-mode button,
+.assistant-tabs button {
+  border-radius: 0;
+  flex: 1;
+  min-height: 34px;
+  font-size: 11px;
+  border-bottom: 2px solid transparent;
+}
+.assistant-mode button[aria-selected="true"],
+.assistant-tabs button[aria-selected="true"] {
+  border-bottom-color: #b193df;
+  background: #353039;
+  color: #fff;
+}
+.assistant-tabs {
+  background: none;
+  margin: 18px -15px 14px;
+}
+.assistant-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.assistant-content[hidden] {
+  display: none;
+}
+.ai-chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.basic-assistant {
+  overflow: auto;
+  padding: 18px 15px 25px;
+  flex: 1;
+}
+.local-badge {
+  display: inline-block;
+  color: #aed6a2;
+  border: 1px solid #475a43;
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 3px 6px;
+  margin-bottom: 14px;
+  background: #263224;
+}
+.basic-intro h3 {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.basic-intro p {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.basic-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 11px;
+  color: #cac8d0;
+  margin: 16px 0 11px;
+}
+.basic-field input,
+.basic-field select {
+  width: 100%;
+  font-size: 11px;
+  background: #1b1b1c;
+  border-color: #48484f;
+  padding: 8px;
+}
+.library-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 13px 0;
+}
+.library-chips span {
+  font:
+    9px Consolas,
+    monospace;
+  color: #c5afd9;
+  border: 1px solid #4d4357;
+  padding: 4px 6px;
+}
+.starter-preview {
+  border: 1px solid #414146;
+  background: #1e1e1e;
+  margin: 14px 0;
+}
+.starter-preview summary {
+  padding: 9px;
+  font-size: 10px;
+}
+.starter-preview pre {
+  font:
+    10px/1.7 Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0 10px 10px;
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  color: #c0c9dd;
+}
+.basic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.basic-actions button,
+.basic-assistant > button {
+  font-size: 10px;
+  border: 1px solid #51475e;
+  min-height: 32px;
+}
+.basic-assistant .hint {
+  font-size: 10px;
+}
+.basic-message {
+  margin-top: 14px;
+  color: #d3b5ef;
+}
+.library-reference article {
+  border-bottom: 1px solid #3b3b3e;
+  padding: 11px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.library-reference code {
+  width: 100%;
+  font:
+    11px Consolas,
+    monospace;
+  color: #d2b8ed;
+  overflow-wrap: anywhere;
+}
+.library-reference small {
+  font:
+    10px Consolas,
+    monospace;
+  color: #aaa;
+  flex: 1;
+  padding-top: 4px;
+}
+.library-reference button {
+  font-size: 9px;
+  padding: 3px 5px;
+  border: 1px solid #48444e;
+}
+.command-palette {
+  width: 560px;
+  align-self: flex-start;
+  margin-top: 65px;
+  border-radius: 4px;
+}
+.command-palette header {
+  padding: 12px 17px;
+}
+.command-palette > input {
+  margin: 12px 14px;
+}
+.command-results {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: 0 9px 12px;
+  max-height: 350px;
+}
+.command-results button {
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+  font-size: 12px;
+  padding: 10px;
+}
+.command-results span {
+  color: #8c8497;
+}
+@media (max-width: 1250px) {
+  .studio {
+    grid-template-columns: 36px 170px minmax(320px, 1fr) 310px;
+  }
+  .studio.assistant-hidden {
+    grid-template-columns: 36px 170px minmax(320px, 1fr);
+  }
+  .titlebar .studio-search {
+    min-width: 150px;
+    margin-left: 5px;
+  }
+  .titlebar .project-title {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

@@ -7,10 +7,13 @@ The compiler lexes and parses real `.chud` / `.CHUD` source, checks types and sc
 ## What works
 
 - Native compilation of `int`, `bool`, strings, functions, immutable/mutable locals, literal constants, conditionals, ranges, loops, short circuit logic, and console output.
+- **62 native library functions**: Text, Math, Convert, IO, Path, Random, Time, integer Collections, original Forge/Spark helpers, and Windows GUI/GUILayout. See [libraries](docs/LIBRARIES.md) and [GUI](docs/GUI.md).
 - `chud new`, `build`, `run`, `check`, `test`, and `clean`, including multi-file projects and debug/release optimization choices.
 - Studio's local Monaco editor, file explorer, source tabs, split editor, saving/autosave, compiler diagnostics, Build/Run/Stop, command execution through PowerShell, and persisted settings.
 - **Settings → Discord Rich Presence**: a simple enable toggle with a built-in CHUD Studio identity, project/filename privacy controls, elapsed time, reconnection and clearing on disable/exit. Defaults off.
 - Four ChudGPT model adapters, explicit context attachments, cancellation, per-model conversations, Markdown/code copying, and a diff review before applying a proposed file replacement.
+- **Basic assistant** in the assistant pane: ten offline starter programs, source preview, customizable titles, safe new-file creation and reviewed replacements. No AI or network calls. The separate ChudGPT AI tab remains available.
+- Visual Studio 2022-inspired compact dark chrome, Solution Explorer, native File/Edit/View/Build/Tools menus, command search (Ctrl+Q), build shortcuts and cursor status.
 - A small compiler-backed language server with document diagnostics, incremental edits, keyword/builtin completion and function symbols.
 
 ## Build on Windows
@@ -34,6 +37,14 @@ Run `CHUD Studio.cmd` after building, or:
 ```powershell
 npm start --prefix studio
 ```
+
+Create or refresh a desktop shortcut after building Studio:
+
+```powershell
+powershell -File scripts/create-shortcut.ps1
+```
+
+The shortcut uses the CHUD icon and opens this checkout. `examples/LibraryTour` demonstrates the standard libraries; `examples/ImmediateGUI` opens an interactive native window. Studio's Basic assistant can also create starter code without a model connection.
 
 The native command launchers are in `build/bin`. For this terminal session:
 
@@ -69,10 +80,10 @@ Compiler tests inspect real PE headers and run emitted programs, including arith
 
 ## Current limits and next steps
 
-Only `int` (32-bit signed), `bool`, UTF-8 string literals and `void` are implemented. Module headers are accepted, but user-module namespaces, package imports, other primitive types, dynamic allocation, structs/classes, traits, generics, Result, collections, async and a debugger are not implemented. No package registry, installer, publish command, formatter or performance claims are provided.
+Implemented types are `int` (32-bit signed), `bool`, immutable UTF-8 strings, typed integer `list`, and `void`. Library strings/lists use bounded process-lifetime allocations (64 MiB total, no garbage collection). Module headers and builtin library imports are accepted, but user-module namespaces, package imports, other numeric types, user allocation, structs/classes, traits, generics, Result, generic collections, async and a debugger are not implemented. No package registry, installer, publish command, formatter or performance claims are provided.
 
 Debug mode currently means unoptimized code; source-level debug metadata and breakpoints are not available. Command execution is a real PowerShell process per submitted command, not a persistent interactive PTY. Studio diagnostics currently check the active document independently; use Check/Build for cross-file validation. The standalone LSP is not yet Studio's transport for editor services. ChudGPT history is held in memory; model mappings follow the documented IDs but endpoint reachability does not prove inference readiness.
 
 Native launchers currently locate resources in the source checkout, so CI artifacts are development artifacts rather than standalone distributions. Next: connect Studio to the LSP as its common language-service transport, improve cross-file diagnostics, introduce module resolution and additional numeric types, then extend the runtime before advanced types and debugging.
 
-Read [Language](docs/LANGUAGE.md), [Compiler and runtime](docs/COMPILER.md), [Studio](docs/STUDIO.md), [ChudGPT](docs/CHUDGPT.md), [Architecture](docs/ARCHITECTURE.md), and [Roadmap](docs/ROADMAP.md).
+Read [Language](docs/LANGUAGE.md), [Libraries](docs/LIBRARIES.md), [GUI](docs/GUI.md), [Compiler and runtime](docs/COMPILER.md), [Studio](docs/STUDIO.md), [ChudGPT](docs/CHUDGPT.md), [Architecture](docs/ARCHITECTURE.md), and [Roadmap](docs/ROADMAP.md).

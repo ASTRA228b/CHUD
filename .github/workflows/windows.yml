@@ -25,5 +25,6 @@ jobs:
             build/bin/*.exe
             build/studio*.png
             studio/dist/
-            runtime/src/core.c
+            runtime/src/
+            runtime/builtins.def
           retention-days: 14

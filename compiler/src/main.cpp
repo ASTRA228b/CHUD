@@ -161,10 +161,12 @@ int main(int argc, char **argv) {
                                   irPath.string(), "-o", object.string()});
     if (code)
       return code;
-    code =
-        chud::runProcess({clang, object.string(),
-                          (fs::path(CHUD_ROOT) / "runtime/src/core.c").string(),
-                          "-o", output.string()});
+    code = chud::runProcess(
+        {clang, object.string(),
+         (fs::path(CHUD_ROOT) / "runtime/src/core.c").string(),
+         (fs::path(CHUD_ROOT) / "runtime/src/libraries.c").string(),
+         (fs::path(CHUD_ROOT) / "runtime/src/gui.c").string(), "-luser32",
+         "-lgdi32", "-o", output.string()});
     return code;
   } catch (const std::exception &e) {
     std::cerr << "CHUD Compiler: " << e.what() << '\n';

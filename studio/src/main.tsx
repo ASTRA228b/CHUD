@@ -7,6 +7,7 @@ import "monaco-editor/esm/vs/editor/edcore.main";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import App from "./App";
 import "./style.css";
+import { libraries } from "./libraries";
 
 (self as unknown as { MonacoEnvironment: unknown }).MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
@@ -65,20 +66,46 @@ monaco.languages.setLanguageConfiguration("chud", {
     { open: '"', close: '"' },
   ],
 });
+monaco.languages.registerCompletionItemProvider("chud", {
+  triggerCharacters: ["."],
+  provideCompletionItems(model, position) {
+    const line = model
+      .getLineContent(position.lineNumber)
+      .slice(0, position.column - 1);
+    const match = /[A-Za-z_][\w.]*$/.exec(line);
+    const start = position.column - (match?.[0].length || 0);
+    return {
+      suggestions: libraries.map((b) => ({
+        label: b.name,
+        kind: monaco.languages.CompletionItemKind.Function,
+        detail: `(${b.parameters.join(", ")}) → ${b.result}`,
+        insertText: `${b.name}(${b.parameters.map((p, i) => "${" + (i + 1) + ":" + (p === "string" ? '"text"' : p === "bool" ? "true" : p === "list" ? "items" : "0") + "}").join(", ")})`,
+        insertTextRules:
+          monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        range: new monaco.Range(
+          position.lineNumber,
+          start,
+          position.lineNumber,
+          position.column,
+        ),
+      })),
+    };
+  },
+});
 monaco.editor.defineTheme("chud-dark", {
   base: "vs-dark",
   inherit: true,
   rules: [
-    { token: "keyword", foreground: "C084FC" },
-    { token: "string", foreground: "A5D6B5" },
-    { token: "number", foreground: "FBBF24" },
+    { token: "keyword", foreground: "569CD6" },
+    { token: "string", foreground: "CE9178" },
+    { token: "number", foreground: "B5CEA8" },
   ],
   colors: {
-    "editor.background": "#15151D",
-    "editor.foreground": "#F1F1F5",
-    "editorLineNumber.foreground": "#555569",
-    "editor.lineHighlightBackground": "#1B1B27",
-    "editor.selectionBackground": "#8B5CF633",
+    "editor.background": "#1E1E1E",
+    "editor.foreground": "#DCDCDC",
+    "editorLineNumber.foreground": "#858585",
+    "editor.lineHighlightBackground": "#282828",
+    "editor.selectionBackground": "#264F78",
   },
 });
 
