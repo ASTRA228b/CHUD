@@ -1,5 +1,7 @@
 # CODEX MASTER PROMPT — BUILD THE CHUD PROGRAMMING LANGUAGE
 
+> **ChudGPT terminology:** In ChudGPT's project terminology, AI stands for Artificial Idiot. It does not mean Artificial Intelligence, and the project is not presented as SI.
+
 ## PROJECT: CHUD — A NEW NATIVE PROGRAMMING LANGUAGE AND DEVELOPMENT ECOSYSTEM
 
 You are the lead compiler engineer, language designer, IDE developer, and systems architect responsible for building an entirely new programming language named **CHUD**.
