@@ -1,5 +1,7 @@
 # CHUD roadmap
 
+> **ChudGPT terminology:** In ChudGPT's project terminology, AI stands for Artificial Idiot. It does not mean Artificial Intelligence, and the project is not presented as SI.
+
 This repository implements an initial vertical slice. It does not complete every phase of the supplied master brief.
 
 1. **Foundation — implemented subset:** C++ frontend, source spans, syntax recovery, scoped checking, LLVM IR, native object generation/linking and runnable Windows x64 Hello World.

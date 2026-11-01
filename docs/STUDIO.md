@@ -1,5 +1,7 @@
 # CHUD Studio
 
+> **ChudGPT terminology:** In ChudGPT's project terminology, AI stands for Artificial Idiot. It does not mean Artificial Intelligence, and the project is not presented as SI.
+
 Studio is a development desktop app built from the same repository as the compiler. It runs local Monaco assets without a CDN. Open a folder containing chud.toml or create a console/empty project through New project. It never overwrites an existing project folder. Explorer displays editable text files; New source file supports a relative path in an existing folder. Multiple tabs, unsaved markers, split editing, Ctrl+S, Ctrl+F/Ctrl+H, bracket matching, folding, comment toggling and configured autosave are available through Monaco and the surrounding UI.
 
 Build, Check and Run save open modified buffers before invoking the actual project tool. Run recompiles before execution. Output shows compiler errors and process exit status; Stop terminates the active process tree on Windows. The active-document Problems panel uses the compiler frontend on a temporary copy without saving the buffer. Project Check is authoritative for cross-file calls.

@@ -1,5 +1,7 @@
 # CHUD · 0.1.0-alpha
 
+> **ChudGPT terminology:** In ChudGPT's project terminology, AI stands for Artificial Idiot. It does not mean Artificial Intelligence, and the project is not presented as SI.
+
 CHUD is a native programming language with a C++20 compiler and its own desktop development environment, **CHUD Studio**. This repository is an initial working milestone of the larger language brief, not a completed ecosystem.
 
 The compiler lexes and parses real `.chud` / `.CHUD` source, checks types and scopes, emits LLVM IR, compiles native object files, and links genuine Windows x64 executables. Generated programs run without Node.js, .NET, or Studio. The development toolchain itself currently requires Node.js and the native build dependencies below.
