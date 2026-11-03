@@ -21,6 +21,8 @@ let activeFile = "",
   mode = "Idle",
   running = null,
   closeApproved = false;
+let shutdownPromise;
+let shutdownComplete = false;
 const presence = new DiscordPresence(
   process.argv.includes("--chud-test-mode") &&
   process.env.CHUD_DISCORD_TEST_PIPE
@@ -37,6 +39,28 @@ const updatePresence = () =>
   presence.update({ project: projectName, file: activeFile, mode });
 presence.on("status", (status) => send("presence", status));
 const projectModule = () => import("../../tools/chud/project.mjs");
+
+function showStudio() {
+  if (!window || window.isDestroyed()) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+}
+function shutdown() {
+  if (shutdownPromise) return shutdownPromise;
+  shutdownPromise = (async () => {
+    assistant.cancel();
+    stopRunning();
+    try {
+      await presence.shutdown();
+    } catch {
+      presence.dispose();
+    }
+    shutdownComplete = true;
+    app.quit();
+  })();
+  return shutdownPromise;
+}
 
 function within(base, candidate) {
   const relative = path.relative(base, candidate);
@@ -183,6 +207,7 @@ async function setup() {
   workspace = initialProject.directory;
   projectName = initialProject.name;
   window = new BrowserWindow({
+    show: false,
     width: 1500,
     height: 940,
     minWidth: 1040,
@@ -198,6 +223,7 @@ async function setup() {
       webSecurity: true,
     },
   });
+  window.once("ready-to-show", showStudio);
   window.setTitle(`${projectName} — CHUD Studio`);
   const command = (label, id, accelerator) => ({
     label,
@@ -440,25 +466,41 @@ async function setup() {
     }
   });
   window.on("close", (e) => {
-    if (!closeApproved) {
+    if (
+      !closeApproved &&
+      !window.webContents.isCrashed() &&
+      !window.webContents.isLoading()
+    ) {
       e.preventDefault();
       send("closeRequest", true);
     }
+  });
+  window.on("closed", () => {
+    window = null;
+    void shutdown();
   });
   await window.loadFile(path.join(__dirname, "../dist/index.html"));
   presence.configure(store.value.discord);
   updatePresence();
 }
-app
-  .whenReady()
-  .then(setup)
-  .catch((e) => {
-    dialog.showErrorBox("CHUD Studio", e.message);
-    app.quit();
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", showStudio);
+  app
+    .whenReady()
+    .then(setup)
+    .catch((e) => {
+      dialog.showErrorBox("CHUD Studio", e.message);
+      void shutdown();
+    });
+  app.on("before-quit", (e) => {
+    if (shutdownComplete) return;
+    e.preventDefault();
+    if (window && !window.isDestroyed()) window.close();
+    else void shutdown();
   });
-app.on("before-quit", () => {
-  presence.dispose();
-  assistant.cancel();
-  stopRunning();
-});
-app.on("window-all-closed", () => app.quit());
+  app.on("window-all-closed", () => {
+    void shutdown();
+  });
+}
