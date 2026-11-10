@@ -7,7 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef _WIN32
 #include <windows.h>
+#define seek_file _fseeki64
+#define tell_file _ftelli64
+#else
+#include <sys/stat.h>
+#include <unistd.h>
+#define seek_file fseek
+#define tell_file ftell
+#endif
 
 // Until CHUD has a tracing collector, allocated values live until process exit.
 // The budget bounds long-running programs and keeps aliases valid.
@@ -235,6 +244,7 @@ int chud_convert_isint(const char *s) {
   int32_t n;
   return parse_int(s, &n);
 }
+#ifdef _WIN32
 static wchar_t *wide_path(const char *s) {
   int n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s, -1, NULL, 0);
   if (!n)
@@ -245,10 +255,15 @@ static wchar_t *wide_path(const char *s) {
   MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s, -1, out, n);
   return out;
 }
-static FILE *open_file(const char *path, const wchar_t *mode) {
+static FILE *open_file(const char *path, const char *mode) {
   wchar_t *name = wide_path(path);
-  FILE *file = _wfopen(name, mode);
+  wchar_t wide_mode[] = {(wchar_t)mode[0], L'b', L'\0'};
+  FILE *file = _wfopen(name, wide_mode);
   free(name);
+#else
+static FILE *open_file(const char *path, const char *mode) {
+  FILE *file = fopen(path, mode);
+#endif
   if (!file)
     chud_fail("Could not open file");
   return file;
@@ -267,11 +282,41 @@ char *chud_io_readline(void) {
     --n;
   return chud_copy(buffer, n);
 }
+static int valid_utf8(const unsigned char *text, size_t size) {
+  for (size_t i = 0; i < size;) {
+    unsigned char lead = text[i++];
+    if (lead < 0x80)
+      continue;
+    int count;
+    uint32_t codepoint, minimum;
+    if (lead >= 0xc2 && lead <= 0xdf) {
+      count = 1; codepoint = lead & 0x1f; minimum = 0x80;
+    } else if (lead >= 0xe0 && lead <= 0xef) {
+      count = 2; codepoint = lead & 0x0f; minimum = 0x800;
+    } else if (lead >= 0xf0 && lead <= 0xf4) {
+      count = 3; codepoint = lead & 7; minimum = 0x10000;
+    } else {
+      return 0;
+    }
+    if ((size_t)count > size - i)
+      return 0;
+    while (count--) {
+      unsigned char next = text[i++];
+      if ((next & 0xc0) != 0x80)
+        return 0;
+      codepoint = (codepoint << 6) | (next & 0x3f);
+    }
+    if (codepoint < minimum || codepoint > 0x10ffff ||
+        (codepoint >= 0xd800 && codepoint <= 0xdfff))
+      return 0;
+  }
+  return 1;
+}
 char *chud_io_read(const char *path) {
-  FILE *file = open_file(path, L"rb");
-  if (_fseeki64(file, 0, SEEK_END))
+  FILE *file = open_file(path, "rb");
+  if (seek_file(file, 0, SEEK_END))
     chud_fail("Cannot seek file");
-  __int64 size = _ftelli64(file);
+  int64_t size = tell_file(file);
   if (size < 0 || size > TEXT_LIMIT)
     chud_fail("File exceeds 16 MiB text limit");
   rewind(file);
@@ -281,13 +326,12 @@ char *chud_io_read(const char *path) {
   fclose(file);
   if (memchr(out, 0, (size_t)size))
     chud_fail("ReadText does not accept binary files containing NUL");
-  if (size && !MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, out,
-                                   (int)size, NULL, 0))
+  if (!valid_utf8((const unsigned char *)out, (size_t)size))
     chud_fail("File is not valid UTF-8 text");
   return out;
 }
 static void write_text(const char *path, const char *text, int append) {
-  FILE *file = open_file(path, append ? L"ab" : L"wb");
+  FILE *file = open_file(path, append ? "ab" : "wb");
   size_t length = strlen(text);
   int failed = fwrite(text, 1, length, file) != length;
   if (fclose(file))
@@ -302,10 +346,15 @@ void chud_io_append(const char *path, const char *text) {
   write_text(path, text, 1);
 }
 int chud_io_exists(const char *path) {
+#ifdef _WIN32
   wchar_t *name = wide_path(path);
   DWORD attr = GetFileAttributesW(name);
   free(name);
   return attr != INVALID_FILE_ATTRIBUTES;
+#else
+  struct stat info;
+  return stat(path, &info) == 0;
+#endif
 }
 static const char *filename(const char *s) {
   const char *name = s;
@@ -344,6 +393,16 @@ char *chud_path_combine(const char *a, const char *b) {
   memcpy(out + n + 1, b, m);
   return out;
 }
+static uint64_t monotonic_ms(void) {
+#ifdef _WIN32
+  return GetTickCount64();
+#else
+  struct timespec now;
+  if (clock_gettime(CLOCK_MONOTONIC, &now))
+    chud_fail("Monotonic clock unavailable");
+  return (uint64_t)now.tv_sec * 1000 + (uint64_t)now.tv_nsec / 1000000;
+#endif
+}
 static uint32_t random_state;
 void chud_random_seed(int32_t seed) {
   random_state = (uint32_t)seed;
@@ -352,7 +411,7 @@ void chud_random_seed(int32_t seed) {
 }
 static uint32_t random_next(void) {
   if (!random_state)
-    chud_random_seed((int32_t)(GetTickCount64() ^ GetCurrentProcessId()));
+    chud_random_seed((int32_t)(monotonic_ms() ^ (uint64_t)time(NULL)));
   random_state ^= random_state << 13;
   random_state ^= random_state >> 17;
   random_state ^= random_state << 5;
@@ -370,8 +429,8 @@ int32_t chud_random_range(int32_t low, int32_t high) {
 }
 int32_t chud_time_now(void) { return checked((int64_t)time(NULL)); }
 int32_t chud_time_millis(void) {
-  static ULONGLONG start;
-  ULONGLONG now = GetTickCount64();
+  static uint64_t start;
+  uint64_t now = monotonic_ms();
   if (!start)
     start = now;
   return (int32_t)((now - start) % 2147483648ull);
@@ -379,7 +438,15 @@ int32_t chud_time_millis(void) {
 void chud_time_sleep(int32_t ms) {
   if (ms < 0)
     chud_fail("Sleep duration cannot be negative");
+#ifdef _WIN32
   Sleep((DWORD)ms);
+#else
+  struct timespec delay = {ms / 1000, (ms % 1000) * 1000000L};
+  while (nanosleep(&delay, &delay)) {
+    if (errno != EINTR)
+      chud_fail("Sleep failed");
+  }
+#endif
 }
 typedef struct List {
   int32_t *items;

@@ -4,7 +4,11 @@
 
 CHUD is a native programming language with a C++20 compiler and its own desktop development environment, **CHUD Studio**. This repository is an initial working milestone of the larger language brief, not a completed ecosystem.
 
-The compiler lexes and parses real `.chud` / `.CHUD` source, checks types and scopes, emits LLVM IR, compiles native object files, and links genuine Windows x64 executables. Generated programs run without Node.js, .NET, or Studio. The development toolchain itself currently requires Node.js and the native build dependencies below.
+The compiler lexes and parses real `.chud` / `.CHUD` source, checks types and scopes, emits LLVM IR, and links native executables for the host platform. Console programs support Windows x64, Linux x64, and macOS on Apple silicon and Intel. Generated programs run without Node.js, .NET, or Studio.
+
+## Download CHUD Studio
+
+Get the Windows setup EXE, Linux DEB, or macOS DMG from the [Studio release](https://github.com/ASTRA228b/CHUD/releases/tag/studio-v0.1.0-alpha). See the [installation guide](docs/INSTALL.md) for platform prerequisites and the first run.
 
 ## What works
 
@@ -82,7 +86,7 @@ Compiler tests inspect real PE headers and run emitted programs, including arith
 
 ## Current limits and next steps
 
-Implemented types are `int` (32-bit signed), `bool`, immutable UTF-8 strings, typed integer `list`, and `void`. Library strings/lists use bounded process-lifetime allocations (64 MiB total, no garbage collection). Module headers and builtin library imports are accepted, but user-module namespaces, package imports, other numeric types, user allocation, structs/classes, traits, generics, Result, generic collections, async and a debugger are not implemented. No package registry, installer, publish command, formatter or performance claims are provided.
+Implemented types are `int` (32-bit signed), `bool`, immutable UTF-8 strings, typed integer `list`, and `void`. Library strings/lists use bounded process-lifetime allocations (64 MiB total, no garbage collection). Module headers and builtin library imports are accepted, but user-module namespaces, package imports, other numeric types, user allocation, structs/classes, traits, generics, Result, generic collections, async and a debugger are not implemented. The language tooling has no package registry, publish command, or formatter.
 
 Debug mode currently means unoptimized code; source-level debug metadata and breakpoints are not available. Command execution is a real PowerShell process per submitted command, not a persistent interactive PTY. Studio diagnostics currently check the active document independently; use Check/Build for cross-file validation. The standalone LSP is not yet Studio's transport for editor services. ChudGPT history is held in memory; model mappings follow the documented IDs but endpoint reachability does not prove inference readiness.
 

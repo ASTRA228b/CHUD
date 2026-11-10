@@ -74,5 +74,5 @@ struct Program {
 };
 Program parse(const std::vector<Token> &tokens,
               std::vector<Diagnostic> &errors);
-std::string generate(const Program &program, bool requireMain);
+std::string generate(const Program &program, bool requireMain, bool allowGui);
 } // namespace chud

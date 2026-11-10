@@ -30,6 +30,7 @@ struct Symbol {
 };
 class Generator {
   const Program &program;
+  const bool allowGui;
   std::unordered_map<std::string, const Function *> functions;
   std::vector<std::unordered_map<std::string, Symbol>> scopes;
   std::vector<std::pair<std::string, std::string>> loops;
@@ -193,6 +194,9 @@ class Generator {
       for (const auto &builtin : builtins()) {
         if (builtin.name != e.value)
           continue;
+        if (!allowGui && (e.value.starts_with("CHUD.GUI.") ||
+                          e.value.starts_with("CHUD.GUILayout.")))
+          throw Failure(e.token.span, "CHUD.GUI and CHUD.GUILayout require Windows");
         if (e.args.size() != builtin.params.size())
           throw Failure(e.token.span,
                         "Wrong argument count for '" + e.value +
@@ -372,7 +376,7 @@ class Generator {
   }
 
 public:
-  explicit Generator(const Program &p) : program(p) {}
+  Generator(const Program &p, bool allowGui) : program(p), allowGui(allowGui) {}
   std::string run(bool requireMain) {
     for (const auto &f : program.functions) {
       if (functions.contains(f.token.text))
@@ -446,7 +450,7 @@ public:
   }
 };
 } // namespace
-std::string generate(const Program &p, bool requireMain) {
-  return Generator(p).run(requireMain);
+std::string generate(const Program &p, bool requireMain, bool allowGui) {
+  return Generator(p, allowGui).run(requireMain);
 }
 } // namespace chud

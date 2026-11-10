@@ -8,7 +8,7 @@ import { compilerPath } from "../tools/chud/project.mjs";
 import { libraryFunctions } from "../tools/chud/libraries.mjs";
 import { starters, starterSource } from "../studio/shared/starters.mjs";
 
-async function native(source, verify, { check = false, input = "" } = {}) {
+async function native(source, verify, { check = false, compileOnly = false, input = "" } = {}) {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "chud-libraries-"));
   try {
     const file = path.join(dir, "Program.CHUD"),
@@ -19,7 +19,7 @@ async function native(source, verify, { check = false, input = "" } = {}) {
       [file, "-o", exe, ...(check ? ["--check", "--diagnostics-json"] : [])],
       { encoding: "utf8", timeout: 30000 },
     );
-    if (check) return verify(compiled);
+    if (check || compileOnly) return verify(compiled);
     assert.equal(compiled.status, 0, compiled.stderr);
     const result = spawnSync(exe, [], {
       cwd: dir,
@@ -199,6 +199,17 @@ test("every Basic assistant starter compiles, including escaped user titles", as
 });
 
 test("native GUI links and completes a real frame and close cycle", async () => {
+  if (process.platform !== "win32") {
+    await native(
+      'CHUD.GUI.Open("Window", 320, 240);',
+      (r) => {
+        assert.equal(r.status, 1);
+        assert.match(r.stderr, /require Windows/);
+      },
+      { compileOnly: true },
+    );
+    return;
+  }
   await native(
     `CHUD.GUI.Open("CHUD GUI runtime test",320,240);
     if CHUD.GUI.BeginFrame() {

@@ -16,6 +16,7 @@ try {
     $shortcut.TargetPath = $electronExe
     $shortcut.Arguments = '"' + (Join-Path $studioRoot 'studio') + '"'
     $shortcut.WorkingDirectory = $studioRoot
+    $shortcut.WindowStyle = 1
     $shortcut.Description = 'CHUD Studio — native CHUD development environment'
     $shortcut.IconLocation = (Join-Path $studioRoot 'studio\assets\chud.ico') + ',0'
     $shortcut.Save()

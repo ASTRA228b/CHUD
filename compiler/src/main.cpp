@@ -26,9 +26,29 @@ static std::string json(const std::string &s) {
   }
   return out + '"';
 }
-int main(int argc, char **argv) {
+static std::string utf8Path(const fs::path &path) {
+  const auto text = path.u8string();
+  return std::string(text.begin(), text.end());
+}
+static fs::path environmentPath(const char *name) {
+#ifdef _WIN32
+  auto wide = fs::path(name).wstring();
+  if (auto value = _wgetenv(wide.c_str()))
+    return value;
+#else
+  if (auto value = std::getenv(name))
+    return value;
+#endif
+  return {};
+}
+#ifdef _WIN32
+static constexpr bool windows = true;
+#else
+static constexpr bool windows = false;
+#endif
+static int compile(int argc, char **argv) {
   std::vector<std::string> files;
-  fs::path output = "program.exe";
+  fs::path output = windows ? "program.exe" : "program";
   bool check = false, jsonErrors = false, library = false, release = false,
        emitIR = false, symbols = false;
   std::vector<chud::Diagnostic> errors;
@@ -40,7 +60,7 @@ int main(int argc, char **argv) {
         return 0;
       }
       if (a == "--help") {
-        std::cout << "CHUD Compiler\nchudc <files.chud> [-o program.exe] "
+        std::cout << "CHUD Compiler\nchudc <files.chud> [-o output] "
                      "[--check] [--release] [--emit-ir] [--diagnostics-json] "
                      "[--library] [--symbols-json]\n";
         return 0;
@@ -114,7 +134,7 @@ int main(int argc, char **argv) {
     }
     if (errors.empty())
       try {
-        ir = chud::generate(program, !library);
+        ir = chud::generate(program, !library, windows || check || emitIR);
       } catch (const chud::Failure &e) {
         errors.push_back({e.span, e.what()});
       }
@@ -149,27 +169,44 @@ int main(int argc, char **argv) {
     std::ofstream(irPath, std::ios::binary) << ir;
     if (emitIR)
       return 0;
-    std::string clang = "clang";
-    if (auto value = std::getenv("CHUD_CLANG"))
-      clang = value;
-    else if (fs::exists(fs::path(CHUD_ROOT) / ".tools/llvm/bin/clang.exe"))
-      clang = (fs::path(CHUD_ROOT) / ".tools/llvm/bin/clang.exe").string();
+    auto clangPath = environmentPath("CHUD_CLANG");
+    const auto localClang = fs::path(CHUD_ROOT) / ".tools/llvm/bin/clang.exe";
+    if (clangPath.empty())
+      clangPath = windows && fs::exists(localClang) ? localClang : fs::path("clang");
+    const auto clang = utf8Path(clangPath);
+    auto runtime = environmentPath("CHUD_RUNTIME");
+    if (runtime.empty())
+      runtime = fs::path(CHUD_ROOT) / "runtime";
     auto object = output;
     object.replace_extension(".obj");
     auto code = chud::runProcess({clang, "-Wno-override-module",
                                   release ? "-O2" : "-O0", "-c",
-                                  irPath.string(), "-o", object.string()});
+                                  utf8Path(irPath), "-o", utf8Path(object)});
     if (code)
       return code;
-    code = chud::runProcess(
-        {clang, object.string(),
-         (fs::path(CHUD_ROOT) / "runtime/src/core.c").string(),
-         (fs::path(CHUD_ROOT) / "runtime/src/libraries.c").string(),
-         (fs::path(CHUD_ROOT) / "runtime/src/gui.c").string(), "-luser32",
-         "-lgdi32", "-o", output.string()});
-    return code;
+    std::vector<std::string> link = {
+        clang, utf8Path(object), utf8Path(runtime / "src/core.c"),
+        utf8Path(runtime / "src/libraries.c")};
+    if (windows)
+      link.insert(link.end(), {utf8Path(runtime / "src/gui.c"), "-luser32", "-lgdi32"});
+    link.insert(link.end(), {"-o", utf8Path(output)});
+    return chud::runProcess(link);
   } catch (const std::exception &e) {
     std::cerr << "CHUD Compiler: " << e.what() << '\n';
     return 1;
   }
 }
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t **argv) {
+  std::vector<std::string> text;
+  for (int i = 0; i < argc; ++i)
+    text.push_back(utf8Path(fs::path(argv[i])));
+  std::vector<char *> args;
+  for (auto &value : text)
+    args.push_back(value.data());
+  return compile(argc, args.data());
+}
+#else
+int main(int argc, char **argv) { return compile(argc, argv); }
+#endif

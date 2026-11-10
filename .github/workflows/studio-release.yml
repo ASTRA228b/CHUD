@@ -1,0 +1,157 @@
+name: CHUD Studio installers
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    tags: ['studio-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studio-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  installers:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Windows-x64
+            runner: windows-2022
+            extension: exe
+          - platform: Linux-x64
+            runner: ubuntu-24.04
+            extension: deb
+          - platform: macOS-arm64
+            runner: macos-15
+            extension: dmg
+          - platform: macOS-x64
+            runner: macos-15-intel
+            extension: dmg
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            studio/package-lock.json
+      - name: Install Linux build and display tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang build-essential xvfb
+      - name: Build compiler (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $clang = Join-Path $env:ProgramFiles 'LLVM/bin/clang.exe'
+          if (Test-Path $clang) { "CHUD_CLANG=$clang" >> $env:GITHUB_ENV }
+          cmake -S . -B build -G 'Visual Studio 17 2022' -A x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build build --config Release
+      - name: Build compiler (Linux and macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 3
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm --prefix studio ci --no-audit --no-fund
+      - name: Test native projects and Studio services
+        run: |
+          npm test
+          npm --prefix studio test
+      - name: Build the Studio installer
+        run: |
+          npm --prefix studio run build
+          npm --prefix studio run package
+      - name: Install and test Windows package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem studio/release/*-Setup.exe)
+          if ($installer.Count -ne 1) { throw 'Expected one Windows installer' }
+          $installDir = Join-Path $env:RUNNER_TEMP 'CHUDStudio'
+          $setup = Start-Process -FilePath $installer[0].FullName -ArgumentList @('/S', "/D=$installDir") -WindowStyle Hidden -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Installer exited with $($setup.ExitCode)" }
+          $env:CHUD_STUDIO_EXECUTABLE = Join-Path $installDir 'CHUD Studio.exe'
+          node studio/tests-ui/packaged.mjs
+      - name: Install and test Linux package
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y ./studio/release/*.deb
+          CHUD_STUDIO_EXECUTABLE='/opt/CHUD Studio/chud-studio' xvfb-run -a node studio/tests-ui/packaged.mjs
+      - name: Install and test macOS package
+        if: runner.os == 'macOS'
+        run: |
+          mount="$RUNNER_TEMP/chud-dmg"
+          hdiutil attach studio/release/*.dmg -readonly -nobrowse -mountpoint "$mount"
+          trap 'hdiutil detach "$mount"' EXIT
+          ditto "$mount/CHUD Studio.app" "$RUNNER_TEMP/CHUD Studio.app"
+          CHUD_STUDIO_EXECUTABLE="$RUNNER_TEMP/CHUD Studio.app/Contents/MacOS/CHUD Studio" node studio/tests-ui/packaged.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studio-${{ matrix.platform }}
+          path: studio/release/CHUD-Studio-*.${{ matrix.extension }}
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish public prerelease
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/studio-v')
+    needs: installers
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: studio-*
+          merge-multiple: true
+          path: assets
+      - name: Verify assets and publish together
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version="$(node -p 'require("./studio/package.json").version')"
+          test "$GITHUB_REF_NAME" = "studio-v$version"
+          prefix="CHUD-Studio-$version"
+          packages=(
+            "$prefix-Windows-x64-Setup.exe"
+            "$prefix-Linux-amd64.deb"
+            "$prefix-macOS-arm64.dmg"
+            "$prefix-macOS-x64.dmg"
+          )
+          (cd assets && sha256sum "${packages[@]}" > SHA256SUMS.txt)
+          if draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [[ "$draft" == false ]]; then
+              echo "Release is already public."
+              exit 0
+            fi
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --prerelease \
+              --title "CHUD Studio $version" --notes-file docs/INSTALL.md
+          fi
+          assets=()
+          for package in "${packages[@]}"; do assets+=("assets/$package"); done
+          gh release upload "$GITHUB_REF_NAME" "${assets[@]}" assets/SHA256SUMS.txt --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false
