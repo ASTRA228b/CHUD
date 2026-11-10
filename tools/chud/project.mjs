@@ -77,8 +77,8 @@ export async function loadProject(directory) {
   if (!inside(sourceRoot, entry)) throw new Error("Entry must be inside src/");
   if (manifest.dependencies && Object.keys(manifest.dependencies).length)
     throw new Error("Package dependencies are not implemented yet");
-  if (manifest.build?.target && manifest.build.target !== "windows-x64")
-    throw new Error("This alpha supports windows-x64 projects");
+  if (manifest.build?.target && !["native", "windows-x64"].includes(manifest.build.target))
+    throw new Error('build.target must be "native" or "windows-x64"');
   if (
     manifest.build?.optimization &&
     !["debug", "release"].includes(manifest.build.optimization)
@@ -100,7 +100,7 @@ export async function createProject(
   await fs.mkdir(path.join(directory, "src"));
   await fs.writeFile(
     path.join(directory, "chud.toml"),
-    `[project]\nname = "${name}"\nversion = "0.1.0"\ntype = "executable"\nentry = "src/Program.chud"\n\n[build]\ntarget = "windows-x64"\noptimization = "debug"\n\n[dependencies]\n`,
+    `[project]\nname = "${name}"\nversion = "0.1.0"\ntype = "executable"\nentry = "src/Program.chud"\n\n[build]\ntarget = "native"\noptimization = "debug"\n\n[dependencies]\n`,
   );
   await fs.writeFile(
     path.join(directory, "src/Program.chud"),

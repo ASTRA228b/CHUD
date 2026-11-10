@@ -464,7 +464,7 @@ export default function App() {
         <div className="explorer-bottom">
           <span className="eyebrow">CHUD COMPILER</span>
           <p>0.1.0-alpha</p>
-          <span className="hint">Native · Windows x64</span>
+          <span className="hint">Native · {state?.platform ?? "Local"}</span>
         </div>
       </aside>
       <main className="editor-area">
@@ -665,8 +665,8 @@ export default function App() {
             >
               <span>PS ›</span>
               <input
-                aria-label="PowerShell command"
-                placeholder="Enter a PowerShell command…"
+                aria-label={`${state?.shell ?? "Shell"} command`}
+                placeholder={`Enter a ${state?.shell ?? "shell"} command…`}
                 disabled={busy}
                 value={terminal}
                 onChange={(e) => setTerminal(e.target.value)}

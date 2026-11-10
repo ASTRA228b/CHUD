@@ -36,17 +36,24 @@ async function check(source, expected) {
     await f.clean();
   }
 }
-test("native PE executable originates from CHUD source and emits UTF-8 output", async () => {
+test("native executable originates from CHUD source and emits UTF-8 output", async () => {
   const f = await fixture(
     'chud CHUD.App; use CHUD.Core; public func Main() -> int { CHUD.Print("Hello from CHUD! 🟣"); return 0; }',
   );
   try {
     assert.equal(f.result.status, 0, f.result.stderr);
     const bytes = await fs.readFile(f.exe);
-    assert.equal(bytes.toString("ascii", 0, 2), "MZ");
-    const pe = bytes.readUInt32LE(0x3c);
-    assert.equal(bytes.toString("ascii", pe, pe + 4), "PE\0\0");
-    assert.equal(bytes.readUInt16LE(pe + 4), 0x8664);
+    if (process.platform === "win32") {
+      assert.equal(bytes.toString("ascii", 0, 2), "MZ");
+      const pe = bytes.readUInt32LE(0x3c);
+      assert.equal(bytes.toString("ascii", pe, pe + 4), "PE\0\0");
+      assert.equal(bytes.readUInt16LE(pe + 4), 0x8664);
+    } else if (process.platform === "darwin") {
+      assert.equal(bytes.readUInt32LE(0), 0xfeedfacf);
+      assert.equal(bytes.readUInt32LE(4), process.arch === "arm64" ? 0x0100000c : 0x01000007);
+    } else {
+      assert.equal(bytes.toString("hex", 0, 4), "7f454c46");
+    }
     const run = spawnSync(f.exe, [], { encoding: "utf8" });
     assert.equal(run.status, 0);
     assert.equal(run.stdout.trim(), "Hello from CHUD! 🟣");

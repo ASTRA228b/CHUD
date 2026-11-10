@@ -5,7 +5,7 @@ type = "executable"
 entry = "src/Program.chud"
 
 [build]
-target = "windows-x64"
+target = "native"
 optimization = "debug"
 
 [dependencies]

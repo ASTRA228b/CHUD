@@ -1,0 +1,37 @@
+appId: com.astra228b.chudstudio
+productName: CHUD Studio
+directories:
+  output: release
+files:
+  - dist/**
+  - electron/**
+  - assets/chud-discord.png
+extraResources:
+  - from: ../build/bin
+    to: chud/build/bin
+    filter:
+      - chudc
+      - chudc.exe
+  - from: ../tools/chud
+    to: chud/tools/chud
+  - from: ../runtime/src
+    to: chud/runtime/src
+  - from: ../node_modules/@iarna/toml
+    to: chud/node_modules/@iarna/toml
+win:
+  target: nsis
+  icon: assets/chud-discord.png
+  artifactName: CHUD-Studio-${version}-Windows-${arch}-Setup.${ext}
+mac:
+  target: dmg
+  icon: assets/chud-discord.png
+  category: public.app-category.developer-tools
+  identity: "-"
+  hardenedRuntime: false
+  artifactName: CHUD-Studio-${version}-macOS-${arch}.${ext}
+linux:
+  target: deb
+  icon: assets/chud-discord.png
+  executableName: chud-studio
+  category: Development
+  artifactName: CHUD-Studio-${version}-Linux-${arch}.${ext}

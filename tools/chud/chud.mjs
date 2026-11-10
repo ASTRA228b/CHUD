@@ -49,6 +49,9 @@ async function main() {
   )
     throw new Error("Unsupported option");
   const project = await loadProject(process.cwd());
+  if (process.platform !== "win32" && project.manifest.build?.target === "windows-x64" &&
+      (command === "build" || command === "run" || command === "test"))
+    throw new Error('This project targets Windows x64. Set build.target = "native" for a local console build.');
   const release =
     args.includes("--release") ||
     project.manifest.build?.optimization === "release";
@@ -72,9 +75,10 @@ async function main() {
     throw new Error(
       "Build output resolves outside the project build directory",
     );
+  const executableExtension = process.platform === "win32" ? ".exe" : "";
   const exe = path.join(
     directory,
-    project.name + (process.platform === "win32" ? ".exe" : ""),
+    project.name + executableExtension,
   );
   if (command === "test") {
     let tests;
@@ -90,7 +94,7 @@ async function main() {
       );
     let index = 0;
     for (const test of tests) {
-      const output = path.join(directory, `test-${index++}.exe`);
+      const output = path.join(directory, `test-${index++}${executableExtension}`);
       const code = await run(
         compilerPath(),
         [test, "-o", output, ...(release ? ["--release"] : [])],

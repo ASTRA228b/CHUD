@@ -14,7 +14,7 @@ async function fakeDiscord({
     process.platform === "win32"
       ? `\\\\.\\pipe\\chud-test-${process.pid}-${Math.random()}`
       : path.join(
-          os.tmpdir(),
+          process.platform === "darwin" ? "/tmp" : os.tmpdir(),
           `chud-test-${process.pid}-${Math.random()}.sock`,
         );
   const messages = [],

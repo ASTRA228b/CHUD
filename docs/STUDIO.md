@@ -1,5 +1,7 @@
 # CHUD Studio
 
+See the [installation guide](INSTALL.md) for the downloadable Windows, macOS, and Linux versions and their build prerequisites.
+
 > **ChudGPT terminology:** In ChudGPT's project terminology, AI stands for Artificial Idiot. It does not mean Artificial Intelligence, and the project is not presented as SI.
 
 Studio is a development desktop app built from the same repository as the compiler. It runs local Monaco assets without a CDN. Open a folder containing chud.toml or create a console/empty project through New project. It never overwrites an existing project folder. Explorer displays editable text files; New source file supports a relative path in an existing folder. Multiple tabs, unsaved markers, split editing, Ctrl+S, Ctrl+F/Ctrl+H, bracket matching, folding, comment toggling and configured autosave are available through Monaco and the surrounding UI.
@@ -34,6 +36,6 @@ The UI smoke test supplies a local IPC test server using `--chud-test-mode` plus
 
 The renderer is sandboxed with context isolation, no Node access, a restrictive CSP and a fixed IPC allowlist. File operations resolve real paths inside the selected project and limit content size. Navigation, popup windows and permission prompts are denied. ChudGPT replies render as text/Markdown. Review replacement opens a diff; Approve and apply changes the editor buffer, and saving is a separate action unless autosave is enabled. This currently replaces a whole active file, not an arbitrary multi-file patch.
 
-Editor panes are toggleable; the bottom panel can be resized. Full rearrangeable layouts, layout persistence, source control, persistent terminal sessions, source-level debugging and a standalone installer are future work.
+Editor panes are toggleable, and the bottom panel can be resized. Full rearrangeable layouts, layout persistence, source control, persistent terminal sessions, and source-level debugging are future work.
 
 The standalone `chud-lsp.exe` speaks Content-Length-framed JSON-RPC over stdio. It shares the compiler frontend for diagnostics and function symbols. It supports incremental UTF-16 text updates and static completion for the implemented keywords/builtins. It checks one document at a time. Go to definition, references, rename, signatures, hover, formatting and code actions are not advertised as supported. Studio currently invokes compiler diagnostics directly rather than using that LSP transport.

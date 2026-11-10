@@ -31,6 +31,8 @@ export interface Presence {
 export interface State {
   workspace: string;
   projectName: string;
+  platform: string;
+  shell: string;
   files: Entry[];
   settings: Settings;
   presence: Presence;

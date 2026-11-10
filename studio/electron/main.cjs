@@ -7,7 +7,12 @@ const { SettingsStore } = require("./settings.cjs");
 const { DiscordPresence } = require("./discord.cjs");
 const { Assistant } = require("./assistant.cjs");
 
-const root = path.resolve(__dirname, "../..");
+const root = app.isPackaged
+  ? path.join(process.resourcesPath, "chud")
+  : path.resolve(__dirname, "../..");
+const windows = process.platform === "win32";
+const shell = windows ? "PowerShell" : "Shell";
+const hostPlatform = { win32: "Windows", darwin: "macOS", linux: "Linux" }[process.platform];
 const workspaceArgument = process.argv
   .find((a) => a.startsWith("--workspace="))
   ?.slice("--workspace=".length);
@@ -38,7 +43,8 @@ const output = (text) => send("output", String(text));
 const updatePresence = () =>
   presence.update({ project: projectName, file: activeFile, mode });
 presence.on("status", (status) => send("presence", status));
-const projectModule = () => import("../../tools/chud/project.mjs");
+const projectModule = () =>
+  import(pathToFileURL(path.join(root, "tools/chud/project.mjs")).href);
 
 function showStudio() {
   if (!window || window.isDestroyed()) return;
@@ -137,6 +143,8 @@ async function state() {
   return {
     workspace,
     projectName,
+    platform: `${hostPlatform} ${process.arch}`,
+    shell,
     files: await files(),
     settings: structuredClone(store.value),
     presence: presence.status,
@@ -144,13 +152,15 @@ async function state() {
   };
 }
 function compiler() {
-  return store.value.compilerPath || path.join(root, "build/bin/chudc.exe");
+  return store.value.compilerPath ||
+    path.join(root, "build/bin", windows ? "chudc.exe" : "chudc");
 }
 function execute(exe, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(exe, args, {
       cwd: workspace,
       windowsHide: true,
+      detached: !windows,
       shell: false,
       ...options,
     });
@@ -183,7 +193,13 @@ function stopRunning() {
       { windowsHide: true },
     );
     killer.on("error", () => child.kill());
-  } else child.kill("SIGTERM");
+  } else if (child.pid) {
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch (error) {
+      if (error.code !== "ESRCH") child.kill("SIGTERM");
+    }
+  }
 }
 function handle(name, fn) {
   ipcMain.handle(`chud:${name}`, async (event, data) => {
@@ -202,7 +218,17 @@ function handle(name, fn) {
 async function setup() {
   store = new SettingsStore(app.getPath("userData"));
   await store.load();
-  const { loadProject } = await projectModule();
+  const { loadProject, createProject } = await projectModule();
+  if (app.isPackaged && !workspaceArgument) {
+    workspace = path.join(app.getPath("userData"), "HelloCHUD");
+    await fs.mkdir(path.dirname(workspace), { recursive: true });
+    try {
+      await fs.access(workspace);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      await createProject(workspace, "HelloCHUD");
+    }
+  }
   const initialProject = await loadProject(workspace);
   workspace = initialProject.directory;
   projectName = initialProject.name;
@@ -214,7 +240,7 @@ async function setup() {
     minHeight: 680,
     backgroundColor: "#1e1e1e",
     title: "CHUD Studio",
-    icon: path.join(__dirname, "../assets/chud.ico"),
+    icon: path.join(__dirname, "../assets/chud-discord.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -227,7 +253,7 @@ async function setup() {
   window.setTitle(`${projectName} — CHUD Studio`);
   const command = (label, id, accelerator) => ({
     label,
-    accelerator,
+    accelerator: accelerator?.replace(/^Ctrl/, "CommandOrControl"),
     click: () => send("command", id),
   });
   Menu.setApplicationMenu(
@@ -378,6 +404,7 @@ async function setup() {
           ...process.env,
           ELECTRON_RUN_AS_NODE: "1",
           CHUD_COMPILER: compiler(),
+          CHUD_RUNTIME: path.join(root, "runtime"),
         },
       });
       output(`\nProcess exited with code ${result.code}\n`);
@@ -395,14 +422,16 @@ async function setup() {
     if (typeof command !== "string" || !command.trim() || command.length > 8000)
       throw new Error("Invalid terminal command");
     if (running) throw new Error("A process is already running");
-    output(`\nPS ${projectName}> ${command}\n`);
+    output(`\n${windows ? "PS " : ""}${projectName}> ${command}\n`);
     const result = await execute(
-      "powershell.exe",
-      ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command],
+      windows ? "powershell.exe" : "/bin/sh",
+      windows
+        ? ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command]
+        : ["-c", command],
       {
         env: {
           ...process.env,
-          PATH: `${path.join(root, "build/bin")};${process.env.PATH}`,
+          PATH: [path.join(root, "build/bin"), process.env.PATH].filter(Boolean).join(path.delimiter),
         },
       },
     );

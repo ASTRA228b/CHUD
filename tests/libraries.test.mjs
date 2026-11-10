@@ -199,6 +199,13 @@ test("every Basic assistant starter compiles, including escaped user titles", as
 });
 
 test("native GUI links and completes a real frame and close cycle", async () => {
+  if (process.platform !== "win32") {
+    await native('CHUD.GUI.Open("Window", 320, 240);', (r) => {
+      assert.equal(r.status, 1);
+      assert.match(r.stderr, /require Windows/);
+    });
+    return;
+  }
   await native(
     `CHUD.GUI.Open("CHUD GUI runtime test",320,240);
     if CHUD.GUI.BeginFrame() {

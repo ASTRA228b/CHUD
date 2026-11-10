@@ -4,6 +4,7 @@ build/
 node_modules/
 dist/
 out/
+/studio/release/
 *.log
 *.user
 .DS_Store
